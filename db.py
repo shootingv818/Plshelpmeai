@@ -1,6 +1,7 @@
 """
 ماژول دیتابیس - SQLite async با aiosqlite
 جداول: iva_accounts, cards, workers, scan_jobs, logs
+تمام نوشتن‌ها با asyncio.Lock محافظت می‌شوند
 """
 import asyncio
 import time
@@ -13,14 +14,16 @@ import config
 DB_PATH = "data/iva_scanner.db"
 
 _db: Optional[aiosqlite.Connection] = None
+_write_lock: asyncio.Lock = None
 
 
 async def init():
     """ایجاد جداول و اتصال به دیتابیس"""
-    global _db
+    global _db, _write_lock
     import os
     os.makedirs("data", exist_ok=True)
 
+    _write_lock = asyncio.Lock()
     _db = await aiosqlite.connect(DB_PATH)
     _db.row_factory = aiosqlite.Row
 
@@ -74,6 +77,7 @@ async def init():
             phase INTEGER DEFAULT 0,
             current_test INTEGER DEFAULT 0,
             total_tests INTEGER DEFAULT 0,
+            checkpoint_index INTEGER DEFAULT 0,
             found_expiry TEXT DEFAULT '',
             found_cvv TEXT DEFAULT '',
             found_pin TEXT DEFAULT '',
@@ -103,6 +107,24 @@ async def close():
         _db = None
 
 
+async def _execute_write(query: str, params=None):
+    """اجرای کوئری نوشتنی با قفل - جلوگیری از تداخل همزمان"""
+    async with _write_lock:
+        if params:
+            await _db.execute(query, params)
+        else:
+            await _db.execute(query)
+        await _db.commit()
+
+
+async def _execute_write_returning(query: str, params=None) -> int:
+    """اجرای INSERT با قفل و برگرداندن lastrowid"""
+    async with _write_lock:
+        async with _db.execute(query, params or []) as cursor:
+            await _db.commit()
+            return cursor.lastrowid
+
+
 # ======== اکانت‌های آیوا ========
 
 async def add_account(phone: str, name: str = "", **kwargs) -> int:
@@ -114,11 +136,9 @@ async def add_account(phone: str, name: str = "", **kwargs) -> int:
         vals.append(v)
     placeholders = ", ".join(["?"] * len(vals))
     col_str = ", ".join(cols)
-    async with _db.execute(
+    return await _execute_write_returning(
         f"INSERT OR REPLACE INTO iva_accounts ({col_str}) VALUES ({placeholders})", vals
-    ) as cursor:
-        await _db.commit()
-        return cursor.lastrowid
+    )
 
 
 async def get_account(phone: str) -> Optional[dict]:
@@ -150,14 +170,12 @@ async def update_account(phone: str, **kwargs):
         return
     sets = ", ".join(f"{k}=?" for k in kwargs.keys())
     vals = list(kwargs.values()) + [phone]
-    await _db.execute(f"UPDATE iva_accounts SET {sets} WHERE phone=?", vals)
-    await _db.commit()
+    await _execute_write(f"UPDATE iva_accounts SET {sets} WHERE phone=?", vals)
 
 
 async def delete_account(phone: str):
     """حذف اکانت"""
-    await _db.execute("DELETE FROM iva_accounts WHERE phone=?", (phone,))
-    await _db.commit()
+    await _execute_write("DELETE FROM iva_accounts WHERE phone=?", (phone,))
 
 
 async def get_active_accounts() -> list:
@@ -184,11 +202,9 @@ async def add_card(pan: str, **kwargs) -> int:
         vals.append(v)
     placeholders = ", ".join(["?"] * len(vals))
     col_str = ", ".join(cols)
-    async with _db.execute(
+    return await _execute_write_returning(
         f"INSERT INTO cards ({col_str}) VALUES ({placeholders})", vals
-    ) as cursor:
-        await _db.commit()
-        return cursor.lastrowid
+    )
 
 
 async def update_card(card_id: int, **kwargs):
@@ -197,8 +213,7 @@ async def update_card(card_id: int, **kwargs):
         return
     sets = ", ".join(f"{k}=?" for k in kwargs.keys())
     vals = list(kwargs.values()) + [card_id]
-    await _db.execute(f"UPDATE cards SET {sets} WHERE id=?", vals)
-    await _db.commit()
+    await _execute_write(f"UPDATE cards SET {sets} WHERE id=?", vals)
 
 
 async def list_cards(status: str = None) -> list:
@@ -216,13 +231,11 @@ async def add_worker(tag: str, ip: str, ssh_port: int = 22, ssh_user: str = "",
                      ssh_pass_enc: str = "", api_port: int = 8765,
                      api_token_enc: str = "", is_master: int = 0) -> int:
     """اضافه کردن ورکر"""
-    async with _db.execute(
+    return await _execute_write_returning(
         """INSERT INTO workers (tag, ip, ssh_port, ssh_user, ssh_pass_enc,
            api_port, api_token_enc, is_master) VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
         (tag, ip, ssh_port, ssh_user, ssh_pass_enc, api_port, api_token_enc, is_master)
-    ) as cursor:
-        await _db.commit()
-        return cursor.lastrowid
+    )
 
 
 async def get_worker(worker_id: int) -> Optional[dict]:
@@ -247,14 +260,12 @@ async def update_worker(worker_id: int, **kwargs):
         return
     sets = ", ".join(f"{k}=?" for k in kwargs.keys())
     vals = list(kwargs.values()) + [worker_id]
-    await _db.execute(f"UPDATE workers SET {sets} WHERE id=?", vals)
-    await _db.commit()
+    await _execute_write(f"UPDATE workers SET {sets} WHERE id=?", vals)
 
 
 async def delete_worker(worker_id: int):
     """حذف ورکر"""
-    await _db.execute("DELETE FROM workers WHERE id=?", (worker_id,))
-    await _db.commit()
+    await _execute_write("DELETE FROM workers WHERE id=?", (worker_id,))
 
 
 async def get_master_worker() -> Optional[dict]:
@@ -275,11 +286,9 @@ async def add_scan_job(card_pan: str, **kwargs) -> int:
         vals.append(v)
     placeholders = ", ".join(["?"] * len(vals))
     col_str = ", ".join(cols)
-    async with _db.execute(
+    return await _execute_write_returning(
         f"INSERT INTO scan_jobs ({col_str}) VALUES ({placeholders})", vals
-    ) as cursor:
-        await _db.commit()
-        return cursor.lastrowid
+    )
 
 
 async def update_scan_job(job_id: int, **kwargs):
@@ -288,13 +297,23 @@ async def update_scan_job(job_id: int, **kwargs):
         return
     sets = ", ".join(f"{k}=?" for k in kwargs.keys())
     vals = list(kwargs.values()) + [job_id]
-    await _db.execute(f"UPDATE scan_jobs SET {sets} WHERE id=?", vals)
-    await _db.commit()
+    await _execute_write(f"UPDATE scan_jobs SET {sets} WHERE id=?", vals)
 
 
 async def get_scan_job(job_id: int) -> Optional[dict]:
     """دریافت جاب اسکن"""
     async with _db.execute("SELECT * FROM scan_jobs WHERE id=?", (job_id,)) as cur:
+        row = await cur.fetchone()
+        return dict(row) if row else None
+
+
+async def get_resumable_job(card_pan: str) -> Optional[dict]:
+    """دریافت آخرین جاب ناتمام قابل ادامه برای یک کارت"""
+    async with _db.execute(
+        "SELECT * FROM scan_jobs WHERE card_pan=? AND status IN ('running','rate_limited') "
+        "ORDER BY id DESC LIMIT 1",
+        (card_pan,)
+    ) as cur:
         row = await cur.fetchone()
         return dict(row) if row else None
 
@@ -314,11 +333,10 @@ async def list_scan_jobs(status: str = None) -> list:
 
 async def add_log(level: str, category: str, message: str, details: str = ""):
     """افزودن لاگ"""
-    await _db.execute(
+    await _execute_write(
         "INSERT INTO logs (level, category, message, details, created_at) VALUES (?, ?, ?, ?, ?)",
         (level, category, message, details, config.now_str())
     )
-    await _db.commit()
 
 
 async def list_logs(category: str = None, level: str = None, limit: int = 50) -> list:
@@ -343,7 +361,6 @@ async def list_logs(category: str = None, level: str = None, limit: int = 50) ->
 async def clear_logs(category: str = None):
     """پاک کردن لاگ‌ها"""
     if category:
-        await _db.execute("DELETE FROM logs WHERE category=?", (category,))
+        await _execute_write("DELETE FROM logs WHERE category=?", (category,))
     else:
-        await _db.execute("DELETE FROM logs")
-    await _db.commit()
+        await _execute_write("DELETE FROM logs")

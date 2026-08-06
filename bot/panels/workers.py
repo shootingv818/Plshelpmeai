@@ -63,7 +63,7 @@ def register(bot):
 
     @bot.on(events.CallbackQuery(data=b"wk_health"))
     async def health_check(event):
-        """بررسی سلامت همه ورکرها"""
+        """بررسی سلامت همه ورکرها - واقعی با ping"""
         if event.sender_id != config.OWNER_ID:
             return
 
@@ -72,11 +72,27 @@ def register(bot):
             await event.answer("ورکری ثبت نشده!", alert=True)
             return
 
-        await event.edit(panel_message("🏥 بررسی سلامت...", ["لطفا صبر کنید..."]))
+        await event.edit(panel_message("🏥 بررسی سلامت...", ["در حال بررسی سرورها..."]))
+
+        from worker.deploy import check_worker_health
 
         rows = []
         for w in workers:
-            rows.append(format_worker_status(w))
+            try:
+                health = await check_worker_health(w)
+                ping = health.get("ping_ms", -1)
+                if health.get("ok"):
+                    status = "online"
+                    emoji = "🟢"
+                else:
+                    status = "offline"
+                    emoji = "🔴"
+                # ذخیره نتیجه در دیتابیس
+                await db.update_worker(w["id"], status=status, ping_ms=ping)
+                rows.append(f"{emoji} {w['tag']} | {w['ip']} | {ping}ms | {status}")
+            except Exception as e:
+                await db.update_worker(w["id"], status="error", ping_ms=-1)
+                rows.append(f"🔴 {w['tag']} | {w['ip']} | خطا: {str(e)[:50]}")
 
         text = panel_message("🏥 وضعیت سلامت ورکرها", rows, f"🕒 {config.now_str()}")
         buttons = [[Button.inline("🔙 بازگشت", b"panel_workers")]]
@@ -219,11 +235,16 @@ async def handle_worker_message(bot, event):
             )
 
             if result.get("ok"):
-                # ذخیره ورکر
+                # رمزنگاری و ذخیره ورکر
+                if not config.is_encryption_enabled():
+                    await event.respond("❌ خطا: WORKER_SECRET تنظیم نشده - رمزها ذخیره نمی‌شوند!")
+                    _conv_state.pop(event.sender_id, None)
+                    return True
+
                 from cryptography.fernet import Fernet
-                f = Fernet(config.WORKER_SECRET.encode()) if config.WORKER_SECRET else None
-                pass_enc = f.encrypt(password.encode()).decode() if f else password
-                token_enc = f.encrypt(result["api_token"].encode()).decode() if f else result["api_token"]
+                f = Fernet(config.WORKER_SECRET.encode())
+                pass_enc = f.encrypt(password.encode()).decode()
+                token_enc = f.encrypt(result["api_token"].encode()).decode()
 
                 await db.add_worker(
                     tag=tag, ip=ip, ssh_port=port, ssh_user=user,

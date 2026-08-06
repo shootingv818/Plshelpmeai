@@ -110,6 +110,8 @@ def validate() -> list:
         problems.append("BOT_TOKEN")
     if not OWNER_ID:
         problems.append("OWNER_ID")
+    if not WORKER_SECRET:
+        problems.append("WORKER_SECRET (کلید Fernet برای رمزنگاری)")
     return problems
 
 
@@ -119,3 +121,8 @@ def validate_worker() -> list:
     if not WORKER_API_TOKEN:
         problems.append("WORKER_API_TOKEN")
     return problems
+
+
+def is_encryption_enabled() -> bool:
+    """آیا رمزنگاری فعال است"""
+    return bool(WORKER_SECRET)
