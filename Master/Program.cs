@@ -37,16 +37,10 @@ builder.Services.AddScoped<IScanJobService, ScanJobService>();
 builder.Services.AddScoped<IIvaAccountService, IvaAccountService>();
 builder.Services.AddScoped<IRedisService, RedisService>();
 builder.Services.AddScoped<IScanOrchestrator, ScanOrchestrator>();
-builder.Services.AddScoped<ITaskProcessor, TaskProcessor>();
 builder.Services.AddScoped<ISystemLogService, SystemLogService>();
 builder.Services.AddScoped<IProxyService, ProxyService>();
 builder.Services.AddScoped<ISignalRNotificationService, SignalRNotificationService>();
 builder.Services.AddScoped<IRemoteServerService, RemoteServerService>();
-
-// Error Handling and Resilience Services
-builder.Services.AddSingleton<IErrorHandlingService, ErrorHandlingService>();
-builder.Services.AddSingleton<IResilientHttpService, ResilientHttpService>();
-builder.Services.AddScoped<IResilientDatabaseService, ResilientDatabaseService>();
 
 // SignalR
 builder.Services.AddSignalR(options =>

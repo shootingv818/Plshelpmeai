@@ -74,9 +74,10 @@ public class Program
                     client.Timeout = TimeSpan.FromMinutes(5);
                 });
 
-                // Services
+                // Services (IMasterApiClient is already registered above via AddHttpClient
+                // as a typed client, so it must NOT be re-registered here or the
+                // configured BaseAddress/Timeout would be lost)
                 services.AddSingleton<IWorkerStateManager, WorkerStateManager>();
-                services.AddSingleton<IMasterApiClient, MasterApiClient>();
                 services.AddSingleton<ITaskExecutor, TaskExecutor>();
                 services.AddSingleton<IIvaWorkerClient, IvaWorkerClient>();
                 services.AddSingleton<IProxyManager, ProxyManager>();

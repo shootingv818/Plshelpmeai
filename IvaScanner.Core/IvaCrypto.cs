@@ -3,7 +3,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace IvaScanner
+namespace IvaScanner.Core
 {
     public sealed class IvaCrypto
     {

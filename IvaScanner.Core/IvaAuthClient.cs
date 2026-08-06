@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Net;
 
-namespace IvaScanner
+namespace IvaScanner.Core
 {
     public sealed class IvaAuthClient : IDisposable
     {

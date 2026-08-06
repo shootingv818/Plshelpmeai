@@ -358,26 +358,7 @@ namespace IvaScanner.Master.Services
                 await _taskDistribution.CancelTasksForJobAsync(jobId);
             }
         }
-    }
 
-    // Result models for task processing
-    public class ExpiryDetectionResult
-    {
-        public bool Success { get; set; }
-        public string Expiry { get; set; } = "";
-        public string? ErrorMessage { get; set; }
-    }
-
-    public class CvvScanResult
-    {
-        public bool Success { get; set; }
-        public string ValidCvv { get; set; } = "";
-        public object? CardInfo { get; set; }
-        public string? ErrorMessage { get; set; }
-    }
-}
-
-        
         public async Task<List<ScanResult>> GetJobResultsAsync(string jobId)
         {
             try
@@ -485,8 +466,8 @@ namespace IvaScanner.Master.Services
             try
             {
                 var workers = await _context.ScanTasks
-                    .Where(t => t.JobId == jobId && !string.IsNullOrEmpty(t.AssignedWorker))
-                    .GroupBy(t => t.AssignedWorker)
+                    .Where(t => t.JobId == jobId && !string.IsNullOrEmpty(t.WorkerId))
+                    .GroupBy(t => t.WorkerId)
                     .Select(g => new 
                     {
                         name = g.Key,
@@ -552,3 +533,21 @@ namespace IvaScanner.Master.Services
                 return new List<object>();
             }
         }
+    }
+
+    // Result models for task processing
+    public class ExpiryDetectionResult
+    {
+        public bool Success { get; set; }
+        public string Expiry { get; set; } = "";
+        public string? ErrorMessage { get; set; }
+    }
+
+    public class CvvScanResult
+    {
+        public bool Success { get; set; }
+        public string ValidCvv { get; set; } = "";
+        public object? CardInfo { get; set; }
+        public string? ErrorMessage { get; set; }
+    }
+}
