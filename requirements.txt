@@ -7,3 +7,4 @@ aiosqlite
 asyncssh
 python-dotenv
 redis
+pysocks

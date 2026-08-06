@@ -53,6 +53,10 @@ SCAN_CHARGE_AMOUNT = _int("SCAN_CHARGE_AMOUNT", 10000)
 SCAN_TARGET_MOBILE = os.getenv("SCAN_TARGET_MOBILE", "").strip()
 SCAN_PROVIDER_ID = os.getenv("SCAN_PROVIDER_ID", "10").strip()
 
+# ---- پروکسی (فیلترشکن) ----
+# فرمت: socks5://user:pass@host:port یا http://host:port
+TELEGRAM_PROXY = os.getenv("TELEGRAM_PROXY", "").strip() or None
+
 # ---- تایم‌زون ----
 TIMEZONE = os.getenv("TIMEZONE", "Asia/Tehran").strip()
 

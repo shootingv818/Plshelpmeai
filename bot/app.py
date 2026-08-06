@@ -3,12 +3,48 @@
 مدیریت هندلرها و دیسپچر اصلی
 """
 import asyncio
+from urllib.parse import urlparse
 
 from telethon import TelegramClient, events
+import socks
 
 import config
 import db
 from bot.panels import main_menu, accounts, scan, workers, logs
+
+
+def _parse_proxy(proxy_url: str):
+    """
+    پارس آدرس پروکسی به فرمت Telethon
+    فرمت‌های پشتیبانی:
+      socks5://user:pass@host:port
+      socks4://host:port
+      http://user:pass@host:port
+      mtproxy://secret@host:port
+    """
+    if not proxy_url:
+        return None
+
+    parsed = urlparse(proxy_url)
+    scheme = parsed.scheme.lower()
+    host = parsed.hostname or ""
+    port = parsed.port or 1080
+    username = parsed.username
+    password = parsed.password
+
+    if scheme in ("socks5", "socks5h"):
+        return (socks.SOCKS5, host, port, True, username, password)
+    elif scheme in ("socks4", "socks4a"):
+        return (socks.SOCKS4, host, port, True, username, password)
+    elif scheme in ("http", "https"):
+        return (socks.HTTP, host, port, True, username, password)
+    elif scheme in ("mtproxy", "mtproto"):
+        # MTProto proxy: secret در username یا password
+        secret = username or password or ""
+        return ("mtproxy", host, port, secret)
+    else:
+        print(f"[!] فرمت پروکسی ناشناخته: {scheme}")
+        return None
 
 
 async def _periodic_health_check(bot):
@@ -50,11 +86,16 @@ async def start_bot():
     # اتصال به دیتابیس
     await db.init()
 
-    # ساخت کلاینت Telethon
+    # ساخت کلاینت Telethon (پروکسی فقط برای تلگرام)
+    proxy_settings = None
+    if config.TELEGRAM_PROXY:
+        proxy_settings = _parse_proxy(config.TELEGRAM_PROXY)
+
     bot = TelegramClient(
         "bot_session",
         config.API_ID,
         config.API_HASH,
+        proxy=proxy_settings,
     )
 
     await bot.start(bot_token=config.BOT_TOKEN)
