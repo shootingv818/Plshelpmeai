@@ -57,6 +57,11 @@ SCAN_PROVIDER_ID = os.getenv("SCAN_PROVIDER_ID", "10").strip()
 # فرمت: socks5://user:pass@host:port یا http://host:port
 TELEGRAM_PROXY = os.getenv("TELEGRAM_PROXY", "").strip() or None
 
+# ---- Telegram API Mirror (reverse proxy روی VPS خارجی) ----
+# اگه داری، آدرس کامل بذار مثل: https://tg.yourdomain.com
+# ربات به‌جای api.telegram.org از اینجا استفاده می‌کنه
+TELEGRAM_API_BASE = os.getenv("TELEGRAM_API_BASE", "").strip() or None
+
 # ---- تایم‌زون ----
 TIMEZONE = os.getenv("TIMEZONE", "Asia/Tehran").strip()
 

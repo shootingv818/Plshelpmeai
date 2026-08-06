@@ -91,6 +91,12 @@ async def start_bot():
     if config.TELEGRAM_PROXY:
         proxy_settings = _parse_proxy(config.TELEGRAM_PROXY)
 
+    # اگه API mirror تنظیم شده ولی پروکسی نه، هشدار بده
+    # (Telethon مستقیم TCP به DC تلگرام وصل می‌شه، نه HTTP API)
+    if config.TELEGRAM_API_BASE and not proxy_settings:
+        print("[!] هشدار: TELEGRAM_API_BASE فقط برای HTTP bot API کار می‌کنه.")
+        print("[!] Telethon نیاز به SOCKS5 proxy داره (TELEGRAM_PROXY)")
+
     bot = TelegramClient(
         "bot_session",
         config.API_ID,
