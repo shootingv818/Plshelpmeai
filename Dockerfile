@@ -4,13 +4,9 @@ WORKDIR /app
 EXPOSE 5000
 EXPOSE 7000
 
-# Install dependencies for Redis and SQL Server
+# Lightweight base: only curl is needed (SQLite is bundled with EF Core, no native DB server required)
 RUN apt-get update && \
-    apt-get install -y curl gnupg2 && \
-    curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-    curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
-    apt-get update && \
-    ACCEPT_EULA=Y apt-get install -y msodbcsql18 mssql-tools18 && \
+    apt-get install -y curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

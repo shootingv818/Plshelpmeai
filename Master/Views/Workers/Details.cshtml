@@ -1,0 +1,114 @@
+@model Worker
+@{
+    ViewData["Title"] = "جزئیات ورکر";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-right me-1"></i>
+        بازگشت به لیست
+    </a>
+</div>
+
+@if (Model == null)
+{
+    <div class="empty-state">
+        <i class="bi bi-exclamation-circle"></i>
+        <h5>ورکر یافت نشد</h5>
+    </div>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-laptop me-2"></i>اطلاعات ورکر</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-4">شناسه</dt>
+                        <dd class="col-8"><code>@Model.Id</code></dd>
+
+                        <dt class="col-4">نام</dt>
+                        <dd class="col-8">@Model.Name</dd>
+
+                        <dt class="col-4">وضعیت</dt>
+                        <dd class="col-8">
+                            @switch (Model.Status)
+                            {
+                                case WorkerStatus.Online:
+                                    <span class="badge bg-success"><span class="status-indicator status-online"></span>آنلاین</span>
+                                    break;
+                                case WorkerStatus.Working:
+                                    <span class="badge bg-warning"><span class="status-indicator status-working"></span>در حال کار</span>
+                                    break;
+                                case WorkerStatus.Offline:
+                                    <span class="badge bg-secondary"><span class="status-indicator status-offline"></span>آفلاین</span>
+                                    break;
+                                default:
+                                    <span class="badge bg-danger"><span class="status-indicator status-error"></span>خطا</span>
+                                    break;
+                            }
+                        </dd>
+
+                        <dt class="col-4">آخرین Heartbeat</dt>
+                        <dd class="col-8">@Model.LastHeartbeat.ToString("yyyy/MM/dd HH:mm:ss")</dd>
+
+                        <dt class="col-4">تسک فعلی</dt>
+                        <dd class="col-8">
+                            @if (!string.IsNullOrEmpty(Model.CurrentTaskId))
+                            {
+                                <code>@Model.CurrentTaskId</code>
+                            }
+                            else
+                            {
+                                <span class="text-muted">خالی</span>
+                            }
+                        </dd>
+
+                        <dt class="col-4">تاخیر</dt>
+                        <dd class="col-8">@((int)Model.Latency.TotalMilliseconds)ms</dd>
+
+                        @if (!string.IsNullOrEmpty(Model.LastError))
+                        {
+                            <dt class="col-4">آخرین خطا</dt>
+                            <dd class="col-8 text-danger">@Model.LastError</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-bar-chart me-2"></i>آمار عملکرد</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div>
+                                    <div class="stat-value text-success">@Model.TasksCompleted</div>
+                                    <div class="stat-label">تسک موفق</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div>
+                                    <div class="stat-value text-danger">@Model.TasksFailed</div>
+                                    <div class="stat-label">تسک ناموفق</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.IvaAccount != null)
+                    {
+                        <hr>
+                        <h6 class="mb-2">اکانت ایوای متصل</h6>
+                        <span class="badge bg-info">@Model.IvaAccount.PhoneNumber</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}

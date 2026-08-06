@@ -1,350 +1,275 @@
-// Remote Server Management JavaScript
+// Remote Server Management (vanilla JS - no jQuery dependency)
 window.RemoteServerManager = {
     currentJobId: null,
     progressInterval: null,
 
-    init: function() {
+    init: function () {
         this.bindEvents();
         this.initSignalR();
         this.startPeriodicRefresh();
     },
 
-    bindEvents: function() {
-        // Test connection buttons
-        $(document).on('click', '.test-connection', function() {
-            const serverId = $(this).data('server-id');
-            RemoteServerManager.testConnection(serverId);
-        });
+    bindEvents: function () {
+        document.addEventListener('click', (e) => {
+            const testBtn = e.target.closest('.test-connection');
+            if (testBtn) {
+                this.testConnection(testBtn.dataset.serverId);
+                return;
+            }
 
-        // Deploy workers buttons
-        $(document).on('click', '.deploy-workers', function() {
-            const serverId = $(this).data('server-id');
-            RemoteServerManager.showDeployModal(serverId);
-        });
+            const deployBtn = e.target.closest('.deploy-workers');
+            if (deployBtn) {
+                this.showDeployModal(deployBtn.dataset.serverId);
+                return;
+            }
 
-        // Manage workers buttons
-        $(document).on('click', '.manage-workers', function() {
-            const serverId = $(this).data('server-id');
-            const action = $(this).data('action');
-            RemoteServerManager.manageWorkers(serverId, action);
-        });
-
-        // Deploy form submission
-        $('#startDeployment').click(function() {
-            RemoteServerManager.startDeployment();
-        });
-
-        // Cancel deployment
-        $('#cancelDeployment').click(function() {
-            RemoteServerManager.cancelDeployment();
-        });
-
-        // Refresh servers button
-        $('#refresh-servers').click(function() {
-            RemoteServerManager.refreshServers();
-        });
-
-        // DataTables initialization
-        if ($.fn.DataTable) {
-            $('#serversTable').DataTable({
-                language: {
-                    url: '/lib/datatables/Persian.json'
-                },
-                order: [[0, 'asc']],
-                pageLength: 25,
-                responsive: true
-            });
-        }
-    },
-
-    initSignalR: function() {
-        // Listen for server status updates
-        if (window.dashboardConnection) {
-            window.dashboardConnection.on('ServerStatusUpdate', function(data) {
-                RemoteServerManager.updateServerStatus(data);
-            });
-
-            window.dashboardConnection.on('DeploymentProgress', function(data) {
-                RemoteServerManager.updateDeploymentProgress(data);
-            });
-        }
-    },
-
-    startPeriodicRefresh: function() {
-        // Refresh server status every 30 seconds
-        setInterval(() => {
-            this.refreshServerStatuses();
-        }, 30000);
-    },
-
-    testConnection: function(serverId) {
-        const button = $(`.test-connection[data-server-id="${serverId}"]`);
-        const originalText = button.html();
-        
-        button.html('<i class="fas fa-spinner fa-spin"></i> تست...').prop('disabled', true);
-
-        $.ajax({
-            url: '/RemoteServer/TestConnection',
-            type: 'POST',
-            data: { serverId: serverId },
-            success: function(result) {
-                if (result.success) {
-                    RemoteServerManager.showNotification('success', 'اتصال موفق!');
-                    RemoteServerManager.updateServerRow(serverId, result);
-                } else {
-                    RemoteServerManager.showNotification('error', 
-                        `اتصال ناموفق: ${result.errorMessage}`);
-                }
-            },
-            error: function() {
-                RemoteServerManager.showNotification('error', 'خطا در تست اتصال');
-            },
-            complete: function() {
-                button.html(originalText).prop('disabled', false);
+            const manageBtn = e.target.closest('.manage-workers');
+            if (manageBtn) {
+                this.manageWorkers(manageBtn.dataset.serverId, manageBtn.dataset.action);
+                return;
             }
         });
+
+        document.getElementById('startDeployment')?.addEventListener('click', () => this.startDeployment());
+        document.getElementById('cancelDeployment')?.addEventListener('click', () => this.cancelDeployment());
+        document.getElementById('refresh-servers')?.addEventListener('click', () => this.refreshServers());
     },
 
-    showDeployModal: function(serverId) {
-        $('#deployServerId').val(serverId);
-        $('#deployModal').modal('show');
+    initSignalR: function () {
+        if (window.dashboardConnection) {
+            window.dashboardConnection.on('ServerStatusUpdate', (data) => this.updateServerStatus(data));
+            window.dashboardConnection.on('DeploymentProgress', (data) => this.updateDeploymentProgress(data));
+        }
     },
 
-    startDeployment: function() {
-        const serverId = $('#deployServerId').val();
-        const workerCount = $('#workerCount').val();
-        const customConfig = $('#customConfig').val();
-        const startImmediately = $('#startImmediately').is(':checked');
+    startPeriodicRefresh: function () {
+        setInterval(() => this.refreshServerStatuses(), 30000);
+    },
+
+    testConnection: function (serverId) {
+        const button = document.querySelector(`.test-connection[data-server-id="${serverId}"]`);
+        const originalHtml = button ? button.innerHTML : '';
+
+        if (button) {
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> تست...';
+            button.disabled = true;
+        }
+
+        fetch('/RemoteServer/TestConnection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'serverId=' + encodeURIComponent(serverId)
+        })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    this.showNotification('success', 'اتصال موفق!');
+                    this.updateServerRow(serverId, result);
+                } else {
+                    this.showNotification('error', `اتصال ناموفق: ${result.errorMessage}`);
+                }
+            })
+            .catch(() => this.showNotification('error', 'خطا در تست اتصال'))
+            .finally(() => {
+                if (button) {
+                    button.innerHTML = originalHtml;
+                    button.disabled = false;
+                }
+            });
+    },
+
+    showDeployModal: function (serverId) {
+        document.getElementById('deployServerId').value = serverId;
+        new bootstrap.Modal(document.getElementById('deployModal')).show();
+    },
+
+    startDeployment: function () {
+        const serverId = document.getElementById('deployServerId').value;
+        const workerCount = document.getElementById('workerCount').value;
+        const customConfig = document.getElementById('customConfig').value;
+        const startImmediately = document.getElementById('startImmediately').checked;
 
         let configuration = {};
         if (customConfig) {
             try {
                 configuration = JSON.parse(customConfig);
             } catch (e) {
-                RemoteServerManager.showNotification('error', 'فرمت JSON نامعتبر');
+                this.showNotification('error', 'فرمت JSON نامعتبر');
                 return;
             }
         }
 
         const request = {
             serverId: serverId,
-            workerCount: parseInt(workerCount),
+            workerCount: parseInt(workerCount, 10),
             configuration: configuration,
             startImmediately: startImmediately
         };
 
-        $.ajax({
-            url: '/RemoteServer/Deploy',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify(request),
-            success: function(result) {
+        fetch('/RemoteServer/DeployWorkers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(request)
+        })
+            .then(r => r.json())
+            .then(result => {
                 if (result.success) {
-                    $('#deployModal').modal('hide');
-                    RemoteServerManager.currentJobId = result.jobId;
-                    RemoteServerManager.showProgressModal();
-                    RemoteServerManager.startProgressMonitoring();
-                    RemoteServerManager.showNotification('info', 'Deploy آغاز شد...');
+                    bootstrap.Modal.getInstance(document.getElementById('deployModal'))?.hide();
+                    this.currentJobId = result.jobId;
+                    this.showProgressModal();
+                    this.startProgressMonitoring();
+                    this.showNotification('info', 'Deploy آغاز شد...');
                 } else {
-                    RemoteServerManager.showNotification('error', 
-                        `خطا در شروع Deploy: ${result.errorMessage}`);
+                    this.showNotification('error', `خطا در شروع Deploy: ${result.errorMessage}`);
                 }
-            },
-            error: function() {
-                RemoteServerManager.showNotification('error', 'خطا در ارسال درخواست Deploy');
-            }
-        });
+            })
+            .catch(() => this.showNotification('error', 'خطا در ارسال درخواست Deploy'));
     },
 
-    showProgressModal: function() {
-        $('#deployProgress').css('width', '0%').text('0%');
-        $('#currentStep').text('در انتظار شروع...');
-        $('#deploymentSteps').empty();
-        $('#cancelDeployment').show();
-        $('#progressModal').modal('show');
+    showProgressModal: function () {
+        const bar = document.getElementById('deployProgress');
+        bar.style.width = '0%';
+        bar.textContent = '0%';
+        document.getElementById('currentStep').textContent = 'در انتظار شروع...';
+        document.getElementById('deploymentSteps').innerHTML = '';
+        document.getElementById('cancelDeployment').style.display = '';
+        new bootstrap.Modal(document.getElementById('progressModal')).show();
     },
 
-    startProgressMonitoring: function() {
-        if (this.progressInterval) {
-            clearInterval(this.progressInterval);
-        }
-
+    startProgressMonitoring: function () {
+        if (this.progressInterval) clearInterval(this.progressInterval);
         this.progressInterval = setInterval(() => {
-            if (this.currentJobId) {
-                this.checkDeploymentProgress();
-            }
-        }, 2000); // Check every 2 seconds
+            if (this.currentJobId) this.checkDeploymentProgress();
+        }, 2000);
     },
 
-    checkDeploymentProgress: function() {
-        $.ajax({
-            url: `/RemoteServer/DeploymentProgress/${this.currentJobId}`,
-            type: 'GET',
-            success: function(progress) {
-                RemoteServerManager.updateDeploymentProgress(progress);
-            },
-            error: function() {
-                console.error('Error checking deployment progress');
-            }
-        });
+    checkDeploymentProgress: function () {
+        fetch(`/RemoteServer/DeploymentProgress/${this.currentJobId}`)
+            .then(r => r.json())
+            .then(progress => this.updateDeploymentProgress(progress))
+            .catch(() => console.error('Error checking deployment progress'));
     },
 
-    updateDeploymentProgress: function(progress) {
+    updateDeploymentProgress: function (progress) {
         const percentage = Math.round(progress.progress || 0);
-        
-        $('#deployProgress').css('width', `${percentage}%`).text(`${percentage}%`);
-        
+        const bar = document.getElementById('deployProgress');
+        bar.style.width = `${percentage}%`;
+        bar.textContent = `${percentage}%`;
+
         if (progress.currentStep) {
-            $('#currentStep').text(progress.currentStep);
+            document.getElementById('currentStep').textContent = progress.currentStep;
         }
 
-        // Update steps list
         if (progress.steps && progress.steps.length > 0) {
-            let stepsHtml = '';
-            progress.steps.forEach(step => {
-                const statusIcon = this.getStepStatusIcon(step.status);
-                const statusClass = this.getStepStatusClass(step.status);
-                
-                stepsHtml += `
-                    <div class="d-flex align-items-center mb-2">
-                        <i class="${statusIcon} ${statusClass} mr-2"></i>
-                        <span class="${statusClass}">${step.name}</span>
-                    </div>
-                `;
-            });
-            $('#deploymentSteps').html(stepsHtml);
+            document.getElementById('deploymentSteps').innerHTML = progress.steps.map(step => `
+                <div class="d-flex align-items-center mb-2">
+                    <i class="${this.getStepStatusIcon(step.status)} ${this.getStepStatusClass(step.status)} me-2"></i>
+                    <span class="${this.getStepStatusClass(step.status)}">${step.name}</span>
+                </div>
+            `).join('');
         }
 
-        // Check if completed or failed
-        if (progress.status === 'Completed') {
-            this.deploymentCompleted(true);
-        } else if (progress.status === 'Failed') {
-            this.deploymentCompleted(false);
-        }
+        if (progress.status === 'Completed') this.deploymentCompleted(true);
+        else if (progress.status === 'Failed') this.deploymentCompleted(false);
     },
 
-    deploymentCompleted: function(success) {
+    deploymentCompleted: function (success) {
         if (this.progressInterval) {
             clearInterval(this.progressInterval);
             this.progressInterval = null;
         }
 
-        $('#cancelDeployment').hide();
-        
+        document.getElementById('cancelDeployment').style.display = 'none';
+
         if (success) {
-            RemoteServerManager.showNotification('success', 'Deploy با موفقیت تکمیل شد!');
+            this.showNotification('success', 'Deploy با موفقیت تکمیل شد!');
             setTimeout(() => {
-                $('#progressModal').modal('hide');
-                RemoteServerManager.refreshServers();
+                bootstrap.Modal.getInstance(document.getElementById('progressModal'))?.hide();
+                this.refreshServers();
             }, 3000);
         } else {
-            RemoteServerManager.showNotification('error', 'Deploy با شکست مواجه شد');
+            this.showNotification('error', 'Deploy با شکست مواجه شد');
         }
 
         this.currentJobId = null;
     },
 
-    cancelDeployment: function() {
+    cancelDeployment: function () {
         if (!this.currentJobId) return;
+        if (!confirm('آیا از لغو Deploy اطمینان دارید؟')) return;
 
-        if (confirm('آیا از لغو Deploy اطمینان دارید؟')) {
-            $.ajax({
-                url: `/RemoteServer/CancelDeployment/${this.currentJobId}`,
-                type: 'POST',
-                success: function(result) {
-                    if (result.success) {
-                        RemoteServerManager.showNotification('info', 'Deploy لغو شد');
-                        $('#progressModal').modal('hide');
-                    }
+        fetch(`/RemoteServer/CancelDeployment/${this.currentJobId}`, { method: 'POST' })
+            .then(r => r.json())
+            .then(result => {
+                if (result.success) {
+                    this.showNotification('info', 'Deploy لغو شد');
+                    bootstrap.Modal.getInstance(document.getElementById('progressModal'))?.hide();
                 }
             });
-        }
     },
 
-    manageWorkers: function(serverId, action) {
-        const actionText = {
-            'start': 'راه‌اندازی',
-            'stop': 'توقف',
-            'restart': 'راه‌اندازی مجدد',
-            'remove': 'حذف'
-        };
+    manageWorkers: function (serverId, action) {
+        const actionText = { start: 'راه‌اندازی', stop: 'توقف', restart: 'راه‌اندازی مجدد', remove: 'حذف' };
+        if (!confirm(`آیا از ${actionText[action]} تمام Workerهای این سرور اطمینان دارید؟`)) return;
 
-        const confirmText = `آیا از ${actionText[action]} تمام Workerهای این سرور اطمینان دارید؟`;
-        
-        if (!confirm(confirmText)) return;
-
-        $.ajax({
-            url: '/RemoteServer/ManageWorkers',
-            type: 'POST',
-            data: {
-                serverId: serverId,
-                action: action
-            },
-            success: function(result) {
+        fetch('/RemoteServer/ManageWorkers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `serverId=${encodeURIComponent(serverId)}&action=${encodeURIComponent(action)}`
+        })
+            .then(r => r.json())
+            .then(result => {
                 if (result.success) {
-                    RemoteServerManager.showNotification('success', result.message);
-                    RemoteServerManager.refreshServers();
+                    this.showNotification('success', result.message);
+                    this.refreshServers();
                 } else {
-                    RemoteServerManager.showNotification('error', result.message);
+                    this.showNotification('error', result.message);
                 }
-            },
-            error: function() {
-                RemoteServerManager.showNotification('error', 'خطا در انجام عملیات');
-            }
-        });
+            })
+            .catch(() => this.showNotification('error', 'خطا در انجام عملیات'));
     },
 
-    refreshServers: function() {
+    refreshServers: function () {
         location.reload();
     },
 
-    refreshServerStatuses: function() {
-        // Get all visible server IDs and refresh their status
-        $('[data-server-id]').each(function() {
-            const serverId = $(this).data('server-id');
-            // Optionally implement individual server status updates
-        });
+    refreshServerStatuses: function () {
+        // Placeholder for individual server status polling if needed later
     },
 
-    updateServerStatus: function(data) {
-        const row = $(`tr[data-server-id="${data.serverId}"]`);
-        if (row.length === 0) return;
+    updateServerStatus: function (data) {
+        const row = document.querySelector(`tr[data-server-id="${data.serverId}"]`);
+        if (!row) return;
 
-        // Update status badge
-        const statusCell = row.find('.server-status');
-        statusCell.removeClass().addClass(`badge server-status ${this.getStatusBadgeClass(data.status)}`);
-        statusCell.text(this.getStatusText(data.status));
+        const statusCell = row.querySelector('.server-status');
+        if (statusCell) {
+            statusCell.className = `badge server-status ${this.getStatusBadgeClass(data.status)}`;
+            statusCell.textContent = this.getStatusText(data.status);
+        }
 
-        // Update worker count if provided
         if (data.activeWorkers !== undefined) {
-            row.find('.worker-count').text(data.activeWorkers);
+            const wc = row.querySelector('.worker-count');
+            if (wc) wc.textContent = data.activeWorkers;
         }
     },
 
-    updateServerRow: function(serverId, data) {
-        const row = $(`tr[data-server-id="${serverId}"]`);
-        if (row.length === 0) return;
-
-        // Update status to online if connection successful
+    updateServerRow: function (serverId, data) {
         if (data.success) {
-            this.updateServerStatus({
-                serverId: serverId,
-                status: 'Online'
-            });
+            this.updateServerStatus({ serverId, status: 'Online' });
         }
     },
 
-    getStepStatusIcon: function(status) {
+    getStepStatusIcon: function (status) {
         switch (status) {
-            case 'Completed': return 'fas fa-check-circle';
-            case 'Running': return 'fas fa-spinner fa-spin';
-            case 'Failed': return 'fas fa-times-circle';
-            case 'Skipped': return 'fas fa-minus-circle';
-            default: return 'fas fa-clock';
+            case 'Completed': return 'bi bi-check-circle-fill';
+            case 'Running': return 'bi bi-arrow-repeat';
+            case 'Failed': return 'bi bi-x-circle-fill';
+            case 'Skipped': return 'bi bi-dash-circle';
+            default: return 'bi bi-clock';
         }
     },
 
-    getStepStatusClass: function(status) {
+    getStepStatusClass: function (status) {
         switch (status) {
             case 'Completed': return 'text-success';
             case 'Running': return 'text-primary';
@@ -354,18 +279,18 @@ window.RemoteServerManager = {
         }
     },
 
-    getStatusBadgeClass: function(status) {
+    getStatusBadgeClass: function (status) {
         switch (status) {
-            case 'Online': return 'badge-success';
-            case 'Offline': return 'badge-secondary';
-            case 'Deploying': return 'badge-warning';
-            case 'Error': return 'badge-danger';
-            case 'Maintenance': return 'badge-info';
-            default: return 'badge-light';
+            case 'Online': return 'bg-success';
+            case 'Offline': return 'bg-secondary';
+            case 'Deploying': return 'bg-warning';
+            case 'Error': return 'bg-danger';
+            case 'Maintenance': return 'bg-info';
+            default: return 'bg-light text-dark';
         }
     },
 
-    getStatusText: function(status) {
+    getStatusText: function (status) {
         switch (status) {
             case 'Online': return 'آنلاین';
             case 'Offline': return 'آفلاین';
@@ -376,44 +301,22 @@ window.RemoteServerManager = {
         }
     },
 
-    showNotification: function(type, message) {
-        // Use existing notification system or create simple alert
-        if (window.showNotification) {
-            window.showNotification(type, message);
-        } else {
-            const alertClass = {
-                'success': 'alert-success',
-                'error': 'alert-danger',
-                'warning': 'alert-warning',
-                'info': 'alert-info'
-            }[type] || 'alert-info';
-
-            const notification = $(`
-                <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
-                     style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
-                    ${message}
-                    <button type="button" class="close" data-dismiss="alert">
-                        <span>&times;</span>
-                    </button>
-                </div>
-            `);
-
-            $('body').append(notification);
-
-            // Auto hide after 5 seconds
-            setTimeout(() => {
-                notification.alert('close');
-            }, 5000);
+    showNotification: function (type, message) {
+        if (window.IvaScanner && window.IvaScanner.showNotification) {
+            window.IvaScanner.showNotification(message, type);
+            return;
         }
+
+        const alertClass = { success: 'alert-success', error: 'alert-danger', warning: 'alert-warning', info: 'alert-info' }[type] || 'alert-info';
+        const notification = document.createElement('div');
+        notification.className = `alert ${alertClass} alert-dismissible fade show position-fixed`;
+        notification.style.top = '20px';
+        notification.style.left = '20px';
+        notification.style.zIndex = '9999';
+        notification.style.minWidth = '300px';
+        notification.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+
+        document.body.appendChild(notification);
+        setTimeout(() => bootstrap.Alert.getOrCreateInstance(notification).close(), 5000);
     }
 };
-
-// Initialize when document is ready
-$(document).ready(function() {
-    if (typeof RemoteServerManager !== 'undefined') {
-        // Initialize will be called from the page
-    }
-});
-
-// Export for global usage
-window.RemoteServerManager = RemoteServerManager;

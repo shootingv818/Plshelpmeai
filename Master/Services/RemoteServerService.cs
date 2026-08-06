@@ -130,7 +130,6 @@ namespace IvaScanner.Master.Services
 
             return result;
         }
-    }
 
         public async Task<string> DeployWorkersAsync(DeployWorkerRequest request)
         {

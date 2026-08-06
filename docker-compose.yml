@@ -1,22 +1,6 @@
 version: '3.8'
 
 services:
-  # SQL Server Database
-  sqlserver:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: iva-sqlserver
-    environment:
-      - ACCEPT_EULA=Y
-      - MSSQL_SA_PASSWORD=IvaScanner2024!
-      - MSSQL_PID=Express
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlserver_data:/var/opt/mssql
-    networks:
-      - iva-network
-    restart: unless-stopped
-
   # Redis Cache/Queue
   redis:
     image: redis:7-alpine
@@ -43,17 +27,17 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:5000;https://+:7000
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=IvaScanner;User Id=sa;Password=IvaScanner2024!;TrustServerCertificate=true
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/iva-scanner.db
       - ConnectionStrings__Redis=redis:6379,password=IvaRedis2024!
       - Worker__HeartbeatTimeout=00:02:00
       - Worker__TaskLeaseTimeout=00:02:00
       - TaskDistribution__ChunkSize=100
       - Logging__LogLevel__Default=Information
     depends_on:
-      - sqlserver
       - redis
     volumes:
       - master_logs:/app/logs
+      - master_data:/app/data
     networks:
       - iva-network
     restart: unless-stopped
@@ -119,24 +103,12 @@ services:
       - iva-network
     restart: unless-stopped
 
-  # SQL Server Management (Adminer)
-  adminer:
-    image: adminer
-    container_name: iva-adminer
-    ports:
-      - "8080:8080"
-    depends_on:
-      - sqlserver
-    networks:
-      - iva-network
-    restart: unless-stopped
-
 volumes:
-  sqlserver_data:
-    driver: local
   redis_data:
     driver: local
   master_logs:
+    driver: local
+  master_data:
     driver: local
   worker_logs:
     driver: local

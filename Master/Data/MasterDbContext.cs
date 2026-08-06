@@ -14,14 +14,14 @@ namespace IvaScanner.Master.Data
         public DbSet<ScanJob> ScanJobs { get; set; }
         public DbSet<ScanTask> ScanTasks { get; set; }
         public DbSet<SystemLog> SystemLogs { get; set; }
-    
-    // Remote Server Management
-    public DbSet<RemoteServer> RemoteServers { get; set; }
-    public DbSet<RemoteWorker> RemoteWorkers { get; set; }
-    public DbSet<ServerHealthCheck> ServerHealthChecks { get; set; }
-    public DbSet<DeploymentJob> DeploymentJobs { get; set; }
-    public DbSet<DeploymentStep> DeploymentSteps { get; set; }
-        
+
+        // Remote Server Management
+        public DbSet<RemoteServer> RemoteServers { get; set; }
+        public DbSet<RemoteWorker> RemoteWorkers { get; set; }
+        public DbSet<ServerHealthCheck> ServerHealthChecks { get; set; }
+        public DbSet<DeploymentJob> DeploymentJobs { get; set; }
+        public DbSet<DeploymentStep> DeploymentSteps { get; set; }
+
         // Proxy Management
         public DbSet<ProxyServer> ProxyServers { get; set; }
         public DbSet<ProxyUsageLog> ProxyUsageLogs { get; set; }
@@ -116,9 +116,6 @@ namespace IvaScanner.Master.Data
                 entity.Property(e => e.JobId).HasMaxLength(50);
                 entity.Property(e => e.TaskId).HasMaxLength(50);
             });
-        }
-    }
-}
 
             // Configure ProxyServer
             modelBuilder.Entity<ProxyServer>(entity =>
@@ -133,13 +130,13 @@ namespace IvaScanner.Master.Data
                 entity.HasIndex(e => e.Country);
                 entity.HasIndex(e => e.Priority);
                 entity.HasIndex(e => e.IsActive);
-                
+
                 // Relationships
                 entity.HasMany(e => e.UsageLogs)
                       .WithOne(e => e.Proxy)
                       .HasForeignKey(e => e.ProxyId)
                       .OnDelete(DeleteBehavior.Cascade);
-                      
+
                 entity.HasMany(e => e.HealthChecks)
                       .WithOne(e => e.Proxy)
                       .HasForeignKey(e => e.ProxyId)
@@ -175,7 +172,7 @@ namespace IvaScanner.Master.Data
                 entity.Property(e => e.Strategy).IsRequired();
                 entity.HasIndex(e => e.Name).IsUnique();
                 entity.HasIndex(e => e.IsActive);
-                
+
                 // Relationships
                 entity.HasMany(e => e.Members)
                       .WithOne(e => e.ProxyPool)
@@ -191,7 +188,7 @@ namespace IvaScanner.Master.Data
                 entity.Property(e => e.ProxyId).IsRequired();
                 entity.HasIndex(e => new { e.ProxyPoolId, e.ProxyId }).IsUnique();
                 entity.HasIndex(e => e.IsEnabled);
-                
+
                 // Relationships
                 entity.HasOne(e => e.Proxy)
                       .WithMany()
@@ -199,56 +196,58 @@ namespace IvaScanner.Master.Data
                       .OnDelete(DeleteBehavior.Restrict);
             });
 
-        
-        // Configure RemoteServer entities
-        modelBuilder.Entity<RemoteServer>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
-            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
-            entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
-            entity.HasIndex(e => e.IpAddress).IsUnique();
-            entity.HasIndex(e => e.Name).IsUnique();
-        });
+            // Configure RemoteServer entities
+            modelBuilder.Entity<RemoteServer>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45);
+                entity.Property(e => e.Username).IsRequired().HasMaxLength(50);
+                entity.HasIndex(e => e.IpAddress).IsUnique();
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
 
-        modelBuilder.Entity<RemoteWorker>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.WorkerId).IsRequired().HasMaxLength(100);
-            entity.HasOne(e => e.Server)
-                .WithMany(s => s.Workers)
-                .HasForeignKey(e => e.ServerId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+            modelBuilder.Entity<RemoteWorker>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.WorkerId).IsRequired().HasMaxLength(100);
+                entity.HasOne(e => e.Server)
+                    .WithMany(s => s.Workers)
+                    .HasForeignKey(e => e.ServerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
 
-        modelBuilder.Entity<ServerHealthCheck>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.HasOne(e => e.Server)
-                .WithMany(s => s.HealthChecks)
-                .HasForeignKey(e => e.ServerId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => e.CheckedAt);
-        });
+            modelBuilder.Entity<ServerHealthCheck>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Server)
+                    .WithMany(s => s.HealthChecks)
+                    .HasForeignKey(e => e.ServerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => e.CheckedAt);
+            });
 
-        modelBuilder.Entity<DeploymentJob>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.HasOne(e => e.Server)
-                .WithMany()
-                .HasForeignKey(e => e.ServerId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => e.StartedAt);
-        });
+            modelBuilder.Entity<DeploymentJob>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.HasOne(e => e.Server)
+                    .WithMany()
+                    .HasForeignKey(e => e.ServerId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => e.StartedAt);
+            });
 
-        modelBuilder.Entity<DeploymentStep>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
-            entity.Property(e => e.Command).IsRequired();
-            entity.HasOne(e => e.Job)
-                .WithMany(j => j.Steps)
-                .HasForeignKey(e => e.JobId)
-                .OnDelete(DeleteBehavior.Cascade);
-            entity.HasIndex(e => e.Order);
-        });
+            modelBuilder.Entity<DeploymentStep>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Command).IsRequired();
+                entity.HasOne(e => e.Job)
+                    .WithMany(j => j.Steps)
+                    .HasForeignKey(e => e.JobId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                entity.HasIndex(e => e.Order);
+            });
+        }
+    }
+}

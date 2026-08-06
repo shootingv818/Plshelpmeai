@@ -18,7 +18,7 @@ builder.Host.UseSerilog();
 
 // Add services
 builder.Services.AddDbContext<MasterDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Redis Configuration
 builder.Services.AddSingleton<IConnectionMultiplexer>(provider =>
@@ -93,11 +93,11 @@ app.UseStaticFiles();
 app.UseRouting();
 app.UseCors();
 
-// Database Migration
+// Database initialization (SQLite - schema created directly from the model)
 using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<MasterDbContext>();
-    context.Database.Migrate();
+    context.Database.EnsureCreated();
 }
 
 // SignalR Hub

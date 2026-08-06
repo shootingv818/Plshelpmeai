@@ -59,30 +59,30 @@ namespace IvaScanner.Core.Models
     {
         [Key]
         public string Id { get; set; } = string.Empty;
-        
+
         [Required]
         public string Name { get; set; } = string.Empty;
-        
+
         public WorkerStatus Status { get; set; } = WorkerStatus.Offline;
-        
+
         public DateTime LastHeartbeat { get; set; }
-        
+
         public string? CurrentTaskId { get; set; }
-        
+
         public int TasksCompleted { get; set; }
-        
+
         public int TasksFailed { get; set; }
-        
+
         public string? ProxyUrl { get; set; }
-        
+
         public string? IvaAccountId { get; set; }
-        
+
         public TimeSpan Latency { get; set; }
-        
+
         public string? LastError { get; set; }
-        
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
+
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
         // Navigation properties
@@ -94,24 +94,24 @@ namespace IvaScanner.Core.Models
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        
+
         [Required]
         public string PhoneNumber { get; set; } = string.Empty;
-        
+
         public string? SessionData { get; set; }
-        
+
         public AccountStatus Status { get; set; } = AccountStatus.Active;
-        
+
         public bool IsActive { get; set; } = true;
-        
+
         public string? AssignedWorkerId { get; set; }
-        
+
         public DateTime LastUsed { get; set; }
-        
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
+
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-        
+
         public string? LastError { get; set; }
 
         // Navigation properties
@@ -122,32 +122,32 @@ namespace IvaScanner.Core.Models
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        
+
         [Required]
         public string CardNumber { get; set; } = string.Empty;
-        
+
         public string PhoneNumbers { get; set; } = string.Empty; // JSON array
-        
+
         public ScanJobStatus Status { get; set; } = ScanJobStatus.Created;
-        
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
+
         public DateTime? StartedAt { get; set; }
-        
+
         public DateTime? CompletedAt { get; set; }
-        
+
         public string? Result { get; set; } // JSON serialized CardInfo
-        
+
         public int Progress { get; set; } = 0;
-        
+
         public int TotalTasks { get; set; }
-        
+
         public int CompletedTasks { get; set; }
-        
+
         public int FailedTasks { get; set; }
-        
+
         public string? ErrorMessage { get; set; }
-        
+
         public string? CreatedBy { get; set; }
 
         // Navigation properties
@@ -158,32 +158,32 @@ namespace IvaScanner.Core.Models
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        
+
         [Required]
         public string JobId { get; set; } = string.Empty;
-        
+
         public int RangeStart { get; set; }
-        
+
         public int RangeEnd { get; set; }
-        
+
         public TaskStatus Status { get; set; } = TaskStatus.Pending;
-        
+
         public string? WorkerId { get; set; }
-        
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        
+
         public DateTime? StartedAt { get; set; }
-        
+
         public DateTime? CompletedAt { get; set; }
-        
+
         public DateTime? LeaseExpiry { get; set; }
-        
+
         public int RetryCount { get; set; } = 0;
-        
+
         public string? Result { get; set; } // JSON result
-        
+
         public string? ErrorMessage { get; set; }
-        
+
         public TimeSpan? ProcessingTime { get; set; }
 
         // Navigation properties
@@ -195,27 +195,27 @@ namespace IvaScanner.Core.Models
     {
         [Key]
         public string Id { get; set; } = Guid.NewGuid().ToString();
-        
+
         [Required]
         public LogLevel Level { get; set; }
-        
+
         [Required]
         public string Message { get; set; } = string.Empty;
-        
+
         public string? Exception { get; set; }
-        
+
         public string? WorkerId { get; set; }
-        
+
         public string? JobId { get; set; }
-        
+
         public string? TaskId { get; set; }
-        
+
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
-        
+
         public string? Properties { get; set; } // JSON additional properties
-        
+
         public string Source { get; set; } = string.Empty;
-        
+
         public string Category { get; set; } = string.Empty;
     }
 
@@ -224,12 +224,12 @@ namespace IvaScanner.Core.Models
     {
         [Required]
         public string WorkerId { get; set; } = string.Empty;
-        
+
         [Required]
         public string Name { get; set; } = string.Empty;
-        
+
         public int MaxConcurrentTasks { get; set; } = 1;
-        
+
         public Dictionary<string, object> Capabilities { get; set; } = new();
     }
 
@@ -237,15 +237,15 @@ namespace IvaScanner.Core.Models
     {
         [Required]
         public string WorkerId { get; set; } = string.Empty;
-        
+
         public WorkerStatus Status { get; set; }
-        
+
         public int ActiveTasks { get; set; }
-        
+
         public int CompletedTasks { get; set; }
-        
+
         public int FailedTasks { get; set; }
-        
+
         public Dictionary<string, object> SystemInfo { get; set; } = new();
     }
 
@@ -259,14 +259,14 @@ namespace IvaScanner.Core.Models
     {
         [Required]
         public string TaskId { get; set; } = string.Empty;
-        
+
         [Required]
         public string WorkerId { get; set; } = string.Empty;
-        
+
         public bool Success { get; set; }
-        
+
         public string? Result { get; set; }
-        
+
         public string? ErrorMessage { get; set; }
     }
 
@@ -274,10 +274,10 @@ namespace IvaScanner.Core.Models
     {
         [Required]
         public string CardNumber { get; set; } = string.Empty;
-        
+
         [Required]
         public List<string> PhoneNumbers { get; set; } = new();
-        
+
         public string? CreatedBy { get; set; }
     }
 
@@ -327,6 +327,18 @@ namespace IvaScanner.Core.Models
         public ProxyStatus Status { get; set; }
     }
 
+    // Result of a single IVA card-scan attempt (used by Worker task execution)
+    public class IvaResult
+    {
+        public string CardNumber { get; set; } = string.Empty;
+        public bool IsSuccessful { get; set; }
+        public long? Amount { get; set; }
+        public string? ExpiryDate { get; set; }
+        public string? ErrorMessage { get; set; }
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        public TimeSpan ResponseTime { get; set; }
+    }
+
     public class TaskCompletionRequest
     {
         public string TaskId { get; set; } = string.Empty;
@@ -356,7 +368,9 @@ namespace IvaScanner.Core.Models
         public DateTime Timestamp { get; set; }
         public double ResponseTime { get; set; }
     }
+
     // IVA Account management requests
+    public class CreateIvaAccountRequest
     {
         [Required]
         public string PhoneNumber { get; set; } = "";
@@ -373,9 +387,7 @@ namespace IvaScanner.Core.Models
         public string? SessionData { get; set; }
         public bool IsActive { get; set; }
     }
-}
 
-    
     // Proxy Management Models
     public class ProxyServer
     {
@@ -405,7 +417,7 @@ namespace IvaScanner.Core.Models
         public List<ProxyHealthCheck> HealthChecks { get; set; } = new();
 
         public string DisplayName => $"{Host}:{Port}";
-        public double SuccessRate => (SuccessCount + FailureCount) > 0 ? 
+        public double SuccessRate => (SuccessCount + FailureCount) > 0 ?
             (double)SuccessCount / (SuccessCount + FailureCount) * 100 : 0;
     }
 
@@ -575,66 +587,4 @@ namespace IvaScanner.Core.Models
         public Dictionary<string, int> ProxiesByCountry { get; set; } = new();
         public Dictionary<ProxyStatus, int> ProxiesByStatus { get; set; } = new();
     }
-
-    // Additional DTOs for Worker
-    public class ScanTaskDto
-    {
-        public string TaskId { get; set; } = string.Empty;
-        public string JobId { get; set; } = string.Empty;
-        public string TaskType { get; set; } = string.Empty;
-        public List<string> CvvList { get; set; } = new();
-        public IvaAccountDto IvaAccount { get; set; } = null!;
-        public DateTime LeaseExpiry { get; set; }
-        public Dictionary<string, object> Parameters { get; set; } = new();
-    }
-
-    public class IvaAccountDto
-    {
-        public string Id { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string? SessionData { get; set; }
-        public AccountStatus Status { get; set; }
-        public bool IsActive { get; set; }
-    }
-
-    public class ProxyServerDto
-    {
-        public int Id { get; set; }
-        public string Host { get; set; } = string.Empty;
-        public int Port { get; set; }
-        public ProxyType Type { get; set; }
-        public string? Username { get; set; }
-        public string? Password { get; set; }
-        public string? Country { get; set; }
-        public ProxyStatus Status { get; set; }
-    }
-
-    public class TaskCompletionRequest
-    {
-        public string TaskId { get; set; } = string.Empty;
-        public string WorkerId { get; set; } = string.Empty;
-        public List<IvaResult> Results { get; set; } = new();
-        public DateTime CompletedAt { get; set; }
-        public TimeSpan ProcessingTime { get; set; }
-        public int ProcessedItems { get; set; }
-    }
-
-    public class TaskFailureRequest
-    {
-        public string TaskId { get; set; } = string.Empty;
-        public string WorkerId { get; set; } = string.Empty;
-        public string ErrorMessage { get; set; } = string.Empty;
-        public DateTime FailedAt { get; set; }
-        public TimeSpan ProcessingTime { get; set; }
-        public int ProcessedItems { get; set; }
-    }
-
-    public class ProxyStatusReport
-    {
-        public int ProxyId { get; set; }
-        public string WorkerId { get; set; } = string.Empty;
-        public bool IsWorking { get; set; }
-        public string? ErrorMessage { get; set; }
-        public DateTime Timestamp { get; set; }
-        public double ResponseTime { get; set; }
-    }
+}

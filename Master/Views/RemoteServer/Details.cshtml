@@ -1,0 +1,141 @@
+@model IvaScanner.Core.Models.RemoteServer
+@{
+    ViewData["Title"] = "جزئیات سرور";
+    var history = ViewBag.DeploymentHistory as List<IvaScanner.Core.Models.DeploymentJob>;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="@Url.Action("Index")" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-right me-1"></i>
+        بازگشت به لیست
+    </a>
+</div>
+
+@if (Model == null)
+{
+    <div class="empty-state">
+        <i class="bi bi-exclamation-circle"></i>
+        <h5>سرور یافت نشد</h5>
+    </div>
+}
+else
+{
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-hdd-network me-2"></i>اطلاعات سرور</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-4">نام</dt>
+                        <dd class="col-8">@Model.Name</dd>
+
+                        <dt class="col-4">آدرس</dt>
+                        <dd class="col-8"><code>@Model.IpAddress:@Model.SshPort</code></dd>
+
+                        <dt class="col-4">کاربر</dt>
+                        <dd class="col-8">@Model.Username</dd>
+
+                        <dt class="col-4">سیستم‌عامل</dt>
+                        <dd class="col-8"><span class="badge bg-info">@Model.OperatingSystem</span></dd>
+
+                        <dt class="col-4">وضعیت</dt>
+                        <dd class="col-8">
+                            <span class="badge @(Model.Status == IvaScanner.Core.Models.ServerStatus.Online ? "bg-success" : Model.Status == IvaScanner.Core.Models.ServerStatus.Error ? "bg-danger" : "bg-secondary")">
+                                @Model.Status
+                            </span>
+                        </dd>
+
+                        <dt class="col-4">مسیر Worker</dt>
+                        <dd class="col-8"><code>@Model.WorkerPath</code></dd>
+
+                        <dt class="col-4">Auto Deploy</dt>
+                        <dd class="col-8">@(Model.AutoDeploy ? "فعال" : "غیرفعال")</dd>
+
+                        @if (!string.IsNullOrEmpty(Model.LastError))
+                        {
+                            <dt class="col-4">آخرین خطا</dt>
+                            <dd class="col-8 text-danger">@Model.LastError</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header"><i class="bi bi-people me-2"></i>Workerها</div>
+                <div class="card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div>
+                                    <div class="stat-value">@Model.ActiveWorkers</div>
+                                    <div class="stat-label">Worker فعال</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-card">
+                                <div>
+                                    <div class="stat-value">@Model.MaxWorkers</div>
+                                    <div class="stat-label">حداکثر Worker</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if (Model.Workers.Any())
+                    {
+                        <table class="table table-sm mb-0">
+                            <thead><tr><th>Worker Id</th><th>وضعیت</th></tr></thead>
+                            <tbody>
+                                @foreach (var w in Model.Workers)
+                                {
+                                    <tr><td><code>@w.WorkerId</code></td><td>@w.Status</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">هیچ Workeری روی این سرور نصب نشده است.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><i class="bi bi-clock-history me-2"></i>تاریخچه Deploy</div>
+        <div class="card-body p-0">
+            @if (history != null && history.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr><th>نوع</th><th>وضعیت</th><th>شروع</th><th>پایان</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var job in history)
+                            {
+                                <tr>
+                                    <td>@job.Type</td>
+                                    <td>@job.Status</td>
+                                    <td><small class="text-muted">@job.StartedAt.ToString("yyyy/MM/dd HH:mm")</small></td>
+                                    <td><small class="text-muted">@(job.CompletedAt?.ToString("yyyy/MM/dd HH:mm") ?? "-")</small></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state">
+                    <i class="bi bi-clock-history"></i>
+                    <p class="mb-0">هنوز هیچ Deploy‌ای انجام نشده است.</p>
+                </div>
+            }
+        </div>
+    </div>
+}

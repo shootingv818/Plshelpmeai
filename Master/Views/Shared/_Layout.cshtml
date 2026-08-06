@@ -4,111 +4,90 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - سامانه اسکنر ایوا</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Persian font (Vazirmatn) -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+
+    <!-- Bootstrap 5 + Bootstrap Icons (single icon set used across the whole app) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
     <link href="~/css/site.css" rel="stylesheet" />
-    <style>
-        body { font-family: 'Vazirmatn', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .sidebar { min-height: 100vh; background: #2c3e50; }
-        .sidebar .nav-link { color: #ecf0f1; padding: 0.75rem 1rem; }
-        .sidebar .nav-link:hover { background: #34495e; color: #fff; }
-        .sidebar .nav-link.active { background: #3498db; color: #fff; }
-        .main-content { background: #f8f9fa; min-height: 100vh; }
-        .card { border: none; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .badge-online { background: #27ae60; }
-        .badge-offline { background: #e74c3c; }
-        .badge-working { background: #f39c12; }
-        .progress-bar { direction: ltr; }
-        .table th { background: #f8f9fa; font-weight: 600; }
-        .btn-group-sm > .btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-        .navbar-brand { font-weight: bold; color: #2c3e50 !important; }
-        .status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 0.5rem; }
-        .status-online { background: #27ae60; }
-        .status-offline { background: #e74c3c; }
-        .status-working { background: #f39c12; }
-        .status-error { background: #e67e22; }
-    </style>
+    @await RenderSectionAsync("Styles", required: false)
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 sidebar px-0">
-                <div class="p-3">
-                    <h5 class="text-white mb-3">
-                        <i class="bi bi-shield-check me-2"></i>
-                        سامانه اسکنر ایوا
-                    </h5>
-                </div>
-                <ul class="nav nav-pills flex-column">
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")" 
-                           href="@Url.Action("Index", "Home")">
-                            <i class="bi bi-house-door me-2"></i>
-                            داشبورد
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Workers" ? "active" : "")" 
-                           href="@Url.Action("Index", "Workers")">
-                            <i class="bi bi-people me-2"></i>
-                            مدیریت ورکرها
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "RemoteServer" ? "active" : "")" 
-                           href="@Url.Action("Index", "RemoteServer")">
-                            <i class="bi bi-hdd-network me-2"></i>
-                            سرورهای Remote
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Scan" ? "active" : "")" 
-                           href="@Url.Action("Index", "Scan")">
-                            <i class="bi bi-search me-2"></i>
-                            اسکن کارت‌ها
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Accounts" ? "active" : "")" 
-                           href="@Url.Action("Index", "Accounts")">
-                            <i class="bi bi-person-badge me-2"></i>
-                            اکانت‌های ایوا
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Logs" ? "active" : "")" 
-                           href="@Url.Action("Index", "Logs")">
-                            <i class="bi bi-journal-text me-2"></i>
-                            لاگ‌های سیستم
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Settings" ? "active" : "")" 
-                           href="@Url.Action("Index", "Settings")">
-                            <i class="bi bi-gear me-2"></i>
-                            تنظیمات
-                        </a>
-                    </li>
-                </ul>
+    <div class="app-shell">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <span class="sidebar-brand-icon"><i class="bi bi-shield-check"></i></span>
+                <span class="sidebar-brand-text">اسکنر ایوا</span>
+            </div>
+
+            <nav class="sidebar-nav">
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")"
+                   href="@Url.Action("Index", "Home")">
+                    <i class="bi bi-grid-1x2"></i>
+                    <span>داشبورد</span>
+                </a>
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Scan" ? "active" : "")"
+                   href="@Url.Action("Index", "Scan")">
+                    <i class="bi bi-search"></i>
+                    <span>اسکن کارت‌ها</span>
+                </a>
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Workers" ? "active" : "")"
+                   href="@Url.Action("Index", "Workers")">
+                    <i class="bi bi-people"></i>
+                    <span>مدیریت ورکرها</span>
+                </a>
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "RemoteServer" ? "active" : "")"
+                   href="@Url.Action("Index", "RemoteServer")">
+                    <i class="bi bi-hdd-network"></i>
+                    <span>سرورهای Remote</span>
+                </a>
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Accounts" ? "active" : "")"
+                   href="@Url.Action("Index", "Accounts")">
+                    <i class="bi bi-person-badge"></i>
+                    <span>اکانت‌های ایوا</span>
+                </a>
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Proxy" ? "active" : "")"
+                   href="@Url.Action("Index", "Proxy")">
+                    <i class="bi bi-globe2"></i>
+                    <span>پروکسی‌ها</span>
+                </a>
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Logs" ? "active" : "")"
+                   href="@Url.Action("Index", "Logs")">
+                    <i class="bi bi-journal-text"></i>
+                    <span>لاگ‌های سیستم</span>
+                </a>
+                <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Settings" ? "active" : "")"
+                   href="@Url.Action("Index", "Settings")">
+                    <i class="bi bi-gear"></i>
+                    <span>تنظیمات</span>
+                </a>
             </nav>
+        </aside>
 
-            <!-- Main Content -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
-                <!-- Header -->
-                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">@ViewData["Title"]</h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
-                        <div class="btn-group me-2" id="real-time-stats">
-                            <span class="badge bg-success me-2">
-                                <i class="bi bi-check-circle me-1"></i>
-                                آنلاین
-                            </span>
-                            <span class="badge bg-info" id="current-time"></span>
-                        </div>
-                    </div>
+        <!-- Main -->
+        <div class="app-main">
+            <header class="app-topbar">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-label="منو">
+                    <i class="bi bi-list"></i>
+                </button>
+
+                <h1 class="app-title">@ViewData["Title"]</h1>
+
+                <div class="topbar-actions">
+                    <span class="conn-badge conn-online" id="real-time-stats">
+                        <i class="bi bi-broadcast"></i>
+                        <span>آنلاین</span>
+                    </span>
+                    <span class="topbar-clock" id="current-time"></span>
                 </div>
+            </header>
 
+            <main class="app-content">
                 <!-- Alerts -->
                 @if (TempData["SuccessMessage"] != null)
                 {
@@ -137,43 +116,45 @@
                     </div>
                 }
 
-                <!-- Content -->
                 @RenderBody()
             </main>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
     <script src="~/js/site.js"></script>
     <script src="~/js/signalr-dashboard.js"></script>
-    
+
     <script>
-        // Update current time
+        // Sidebar toggle (mobile)
+        document.getElementById('sidebarToggle')?.addEventListener('click', function () {
+            document.getElementById('sidebar').classList.toggle('open');
+        });
+
+        // Live clock
         function updateTime() {
             const now = new Date();
-            const timeString = now.toLocaleString('fa-IR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('current-time').textContent = timeString;
+            const el = document.getElementById('current-time');
+            if (el) {
+                el.textContent = now.toLocaleString('fa-IR', {
+                    hour: '2-digit', minute: '2-digit', second: '2-digit'
+                });
+            }
         }
-        
         setInterval(updateTime, 1000);
         updateTime();
-        
+
         // Auto-dismiss alerts
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
+        setTimeout(function () {
+            document.querySelectorAll('.alert').forEach(alert => {
                 if (alert.querySelector('.btn-close')) {
                     bootstrap.Alert.getOrCreateInstance(alert).close();
                 }
             });
         }, 5000);
     </script>
-    
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

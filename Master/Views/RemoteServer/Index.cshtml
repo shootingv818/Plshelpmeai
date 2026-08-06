@@ -1,224 +1,170 @@
 @model List<IvaScanner.Core.Models.RemoteServer>
 @{
-    ViewData["Title"] = "مدیریت سرورهای Remote";
+    ViewData["Title"] = "سرورهای Remote";
     Layout = "_Layout";
 }
 
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-8">
-            <h2 class="page-title">
-                <i class="fas fa-server"></i>
-                مدیریت سرورهای Remote
-            </h2>
-            <p class="text-muted">مدیریت و deploy کردن Workerها روی سرورهای مختلف</p>
-        </div>
-        <div class="col-md-4 text-left">
-            <a href="@Url.Action("Create")" class="btn btn-primary">
-                <i class="fas fa-plus"></i>
-                افزودن سرور جدید
-            </a>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <p class="text-muted mb-0">مدیریت و نصب خودکار Worker روی سرورهای مختلف</p>
+    <a href="@Url.Action("Create")" class="btn btn-primary">
+        <i class="bi bi-plus-lg me-1"></i>
+        افزودن سرور جدید
+    </a>
+</div>
+
+<!-- Server Statistics Cards -->
+<div class="row mb-4 g-3">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@Model.Count</div>
+                <div class="stat-label">کل سرورها</div>
+            </div>
+            <span class="stat-icon stat-icon-brand"><i class="bi bi-hdd-network"></i></span>
         </div>
     </div>
-
-    <!-- Server Statistics Cards -->
-    <div class="row mb-4">
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-primary shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">کل سرورها</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-server fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@Model.Count(s => s.Status == IvaScanner.Core.Models.ServerStatus.Online)</div>
+                <div class="stat-label">سرورهای آنلاین</div>
             </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-success shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">سرورهای آنلاین</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(s => s.Status == IvaScanner.Core.Models.ServerStatus.Online)</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-info shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">کل Workerها</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Sum(s => s.ActiveWorkers)</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-xl-3 col-md-6 mb-4">
-            <div class="card border-right-warning shadow h-100 py-2">
-                <div class="card-body">
-                    <div class="row no-gutters align-items-center">
-                        <div class="col mr-2">
-                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Auto Deploy</div>
-                            <div class="h5 mb-0 font-weight-bold text-gray-800">@Model.Count(s => s.AutoDeploy)</div>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-rocket fa-2x text-gray-300"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <span class="stat-icon stat-icon-success"><i class="bi bi-check-circle"></i></span>
         </div>
     </div>
-
-    <!-- Servers Table -->
-    <div class="card shadow mb-4">
-        <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-            <h6 class="m-0 font-weight-bold text-primary">لیست سرورها</h6>
-            <div class="dropdown no-arrow">
-                <button class="btn btn-sm btn-outline-primary" id="refresh-servers">
-                    <i class="fas fa-sync-alt"></i>
-                    بروزرسانی
-                </button>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@Model.Sum(s => s.ActiveWorkers)</div>
+                <div class="stat-label">کل Workerها</div>
             </div>
+            <span class="stat-icon stat-icon-info"><i class="bi bi-people"></i></span>
         </div>
-        <div class="card-body">
-            @if (Model.Any())
-            {
-                <div class="table-responsive">
-                    <table class="table table-bordered" id="serversTable">
-                        <thead>
-                            <tr>
-                                <th>نام سرور</th>
-                                <th>IP Address</th>
-                                <th>سیستم‌عامل</th>
-                                <th>وضعیت</th>
-                                <th>Workerهای فعال</th>
-                                <th>حداکثر Worker</th>
-                                <th>آخرین بررسی</th>
-                                <th>عملیات</th>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@Model.Count(s => s.AutoDeploy)</div>
+                <div class="stat-label">Auto Deploy</div>
+            </div>
+            <span class="stat-icon stat-icon-warning"><i class="bi bi-rocket-takeoff"></i></span>
+        </div>
+    </div>
+</div>
+
+<!-- Servers Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list me-2"></i>لیست سرورها</span>
+        <button class="btn btn-sm btn-outline-secondary" id="refresh-servers">
+            <i class="bi bi-arrow-clockwise me-1"></i>
+            بروزرسانی
+        </button>
+    </div>
+    <div class="card-body p-0">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="serversTable">
+                    <thead>
+                        <tr>
+                            <th>نام سرور</th>
+                            <th>IP Address</th>
+                            <th>سیستم‌عامل</th>
+                            <th>وضعیت</th>
+                            <th>Workerهای فعال</th>
+                            <th>حداکثر Worker</th>
+                            <th>آخرین بررسی</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var server in Model)
+                        {
+                            <tr data-server-id="@server.Id">
+                                <td>
+                                    <strong>@server.Name</strong>
+                                    @if (server.AutoDeploy)
+                                    {
+                                        <span class="badge bg-success ms-1">Auto</span>
+                                    }
+                                </td>
+                                <td>
+                                    <code>@server.IpAddress:@server.SshPort</code>
+                                    <br>
+                                    <small class="text-muted">@server.Username</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@server.OperatingSystem</span>
+                                </td>
+                                <td>
+                                    <span class="badge server-status @GetStatusBadgeClass(server.Status)">
+                                        @GetStatusText(server.Status)
+                                    </span>
+                                    @if (!string.IsNullOrEmpty(server.LastError))
+                                    {
+                                        <i class="bi bi-exclamation-triangle text-warning ms-1" title="@server.LastError"></i>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="worker-count">@server.ActiveWorkers</span>
+                                    @if (server.ActiveWorkers > 0)
+                                    {
+                                        <span class="status-indicator status-online ms-1"></span>
+                                    }
+                                </td>
+                                <td>@server.MaxWorkers</td>
+                                <td>
+                                    @if (server.LastChecked != default)
+                                    {
+                                        <small class="text-muted" title="@server.LastChecked.ToString("yyyy/MM/dd HH:mm:ss")">
+                                            @GetRelativeTime(server.LastChecked)
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">هرگز</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            عملیات
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="@Url.Action("Details", new { id = server.Id })"><i class="bi bi-eye me-2"></i>مشاهده جزئیات</a></li>
+                                            <li><button class="dropdown-item test-connection" data-server-id="@server.Id"><i class="bi bi-plug me-2"></i>تست اتصال</button></li>
+                                            <li><button class="dropdown-item deploy-workers" data-server-id="@server.Id"><i class="bi bi-rocket-takeoff me-2"></i>Deploy Worker</button></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><button class="dropdown-item manage-workers" data-server-id="@server.Id" data-action="restart"><i class="bi bi-arrow-repeat me-2"></i>راه‌اندازی مجدد Workerها</button></li>
+                                            <li><button class="dropdown-item manage-workers" data-server-id="@server.Id" data-action="stop"><i class="bi bi-stop-circle me-2"></i>توقف Workerها</button></li>
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button class="dropdown-item text-danger" onclick="confirmDelete('@server.Id', '@server.Name')">
+                                                    <i class="bi bi-trash me-2"></i>حذف سرور
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var server in Model)
-                            {
-                                <tr data-server-id="@server.Id">
-                                    <td>
-                                        <strong>@server.Name</strong>
-                                        @if (server.AutoDeploy)
-                                        {
-                                            <span class="badge badge-success badge-sm mr-1">Auto</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <code>@server.IpAddress:@server.SshPort</code>
-                                        <br>
-                                        <small class="text-muted">@server.Username</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-info">@server.OperatingSystem</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge server-status @GetStatusBadgeClass(server.Status)">
-                                            @GetStatusText(server.Status)
-                                        </span>
-                                        @if (!string.IsNullOrEmpty(server.LastError))
-                                        {
-                                            <i class="fas fa-exclamation-triangle text-warning mr-1" 
-                                               title="@server.LastError"></i>
-                                        }
-                                    </td>
-                                    <td>
-                                        <span class="worker-count">@server.ActiveWorkers</span>
-                                        @if (server.ActiveWorkers > 0)
-                                        {
-                                            <small class="text-success">
-                                                <i class="fas fa-circle pulse"></i>
-                                            </small>
-                                        }
-                                    </td>
-                                    <td>@server.MaxWorkers</td>
-                                    <td>
-                                        @if (server.LastChecked != default)
-                                        {
-                                            <small class="text-muted" title="@server.LastChecked.ToString("yyyy/MM/dd HH:mm:ss")">
-                                                @GetRelativeTime(server.LastChecked)
-                                            </small>
-                                        }
-                                        else
-                                        {
-                                            <small class="text-muted">هرگز</small>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" 
-                                                    data-toggle="dropdown">
-                                                عملیات
-                                            </button>
-                                            <div class="dropdown-menu dropdown-menu-left">
-                                                <a class="dropdown-item" href="@Url.Action("Details", new { id = server.Id })">
-                                                    <i class="fas fa-eye"></i> مشاهده جزئیات
-                                                </a>
-                                                <button class="dropdown-item test-connection" data-server-id="@server.Id">
-                                                    <i class="fas fa-plug"></i> تست اتصال
-                                                </button>
-                                                <button class="dropdown-item deploy-workers" data-server-id="@server.Id">
-                                                    <i class="fas fa-rocket"></i> Deploy Worker
-                                                </button>
-                                                <div class="dropdown-divider"></div>
-                                                <button class="dropdown-item manage-workers" 
-                                                        data-server-id="@server.Id" data-action="restart">
-                                                    <i class="fas fa-redo"></i> راه‌اندازی مجدد Workerها
-                                                </button>
-                                                <button class="dropdown-item manage-workers" 
-                                                        data-server-id="@server.Id" data-action="stop">
-                                                    <i class="fas fa-stop"></i> توقف Workerها
-                                                </button>
-                                                <div class="dropdown-divider"></div>
-                                                <a class="dropdown-item text-danger" href="#" 
-                                                   onclick="confirmDelete('@server.Id', '@server.Name')">
-                                                    <i class="fas fa-trash"></i> حذف سرور
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="text-center py-4">
-                    <i class="fas fa-server fa-3x text-gray-300 mb-3"></i>
-                    <h5 class="text-gray-500">هیچ سروری یافت نشد</h5>
-                    <p class="text-muted">برای شروع، سرور جدیدی اضافه کنید</p>
-                    <a href="@Url.Action("Create")" class="btn btn-primary">
-                        <i class="fas fa-plus"></i>
-                        افزودن سرور اول
-                    </a>
-                </div>
-            }
-        </div>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-hdd-network"></i>
+                <h5>هیچ سروری یافت نشد</h5>
+                <p class="text-muted">برای شروع، سرور جدیدی اضافه کنید</p>
+                <a href="@Url.Action("Create")" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-1"></i>
+                    افزودن سرور اول
+                </a>
+            </div>
+        }
     </div>
 </div>
 
@@ -228,23 +174,21 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Deploy Worker جدید</h5>
-                <button type="button" class="close" data-dismiss="modal">
-                    <span>&times;</span>
-                </button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="deployForm">
                     <input type="hidden" id="deployServerId">
-                    
-                    <div class="form-group">
-                        <label>تعداد Workerها:</label>
+
+                    <div class="mb-3">
+                        <label class="form-label">تعداد Workerها</label>
                         <input type="number" class="form-control" id="workerCount" min="1" max="10" value="1">
                         <small class="form-text text-muted">حداکثر 10 Worker همزمان</small>
                     </div>
 
-                    <div class="form-group">
-                        <label>تنظیمات اضافی:</label>
-                        <textarea class="form-control" id="customConfig" rows="3" 
+                    <div class="mb-3">
+                        <label class="form-label">تنظیمات اضافی</label>
+                        <textarea class="form-control" id="customConfig" rows="3"
                                   placeholder='{"MaxConcurrentTasks": 2}'></textarea>
                         <small class="form-text text-muted">JSON format (اختیاری)</small>
                     </div>
@@ -258,9 +202,9 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
                 <button type="button" class="btn btn-primary" id="startDeployment">
-                    <i class="fas fa-rocket"></i>
+                    <i class="bi bi-rocket-takeoff me-1"></i>
                     شروع Deploy
                 </button>
             </div>
@@ -279,18 +223,16 @@
                 <div class="progress mb-3">
                     <div class="progress-bar" id="deployProgress" role="progressbar" style="width: 0%">0%</div>
                 </div>
-                
-                <div id="deploymentSteps">
-                    <!-- Steps will be populated by JavaScript -->
-                </div>
-                
+
+                <div id="deploymentSteps"></div>
+
                 <div class="mt-3">
                     <strong>مرحله فعلی:</strong>
                     <span id="currentStep">در انتظار شروع...</span>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">بستن</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">بستن</button>
                 <button type="button" class="btn btn-danger" id="cancelDeployment" style="display: none;">
                     لغو Deploy
                 </button>
@@ -304,12 +246,12 @@
     {
         return status switch
         {
-            IvaScanner.Core.Models.ServerStatus.Online => "badge-success",
-            IvaScanner.Core.Models.ServerStatus.Offline => "badge-secondary",
-            IvaScanner.Core.Models.ServerStatus.Deploying => "badge-warning",
-            IvaScanner.Core.Models.ServerStatus.Error => "badge-danger",
-            IvaScanner.Core.Models.ServerStatus.Maintenance => "badge-info",
-            _ => "badge-light"
+            IvaScanner.Core.Models.ServerStatus.Online => "bg-success",
+            IvaScanner.Core.Models.ServerStatus.Offline => "bg-secondary",
+            IvaScanner.Core.Models.ServerStatus.Deploying => "bg-warning",
+            IvaScanner.Core.Models.ServerStatus.Error => "bg-danger",
+            IvaScanner.Core.Models.ServerStatus.Maintenance => "bg-info",
+            _ => "bg-light text-dark"
         };
     }
 
@@ -339,15 +281,17 @@
 @section Scripts {
     <script src="~/js/remote-server.js"></script>
     <script>
-        $(document).ready(function() {
+        document.addEventListener('DOMContentLoaded', function () {
             RemoteServerManager.init();
         });
 
         function confirmDelete(serverId, serverName) {
             if (confirm(`آیا از حذف سرور "${serverName}" اطمینان دارید؟\n\nاین عمل غیرقابل برگشت است.`)) {
-                $.post('@Url.Action("Delete")', { id: serverId }, function(result) {
-                    location.reload();
-                });
+                fetch('@Url.Action("Delete")', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'id=' + encodeURIComponent(serverId)
+                }).then(() => location.reload());
             }
         }
     </script>

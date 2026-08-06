@@ -3,72 +3,44 @@
 }
 
 <!-- System Stats Cards -->
-<div class="row mb-4">
-    <div class="col-md-3 mb-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <h3 class="mb-0 text-success">@ViewBag.ActiveWorkers</h3>
-                        <p class="mb-0 text-muted">ورکر فعال</p>
-                        <small class="text-muted">از @ViewBag.TotalWorkers کل</small>
-                    </div>
-                    <div class="text-success">
-                        <i class="bi bi-people-fill" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+<div class="row mb-4 g-3">
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@ViewBag.ActiveWorkers</div>
+                <div class="stat-label">ورکر فعال از @ViewBag.TotalWorkers کل</div>
             </div>
+            <span class="stat-icon stat-icon-success"><i class="bi bi-people-fill"></i></span>
         </div>
     </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <h3 class="mb-0 text-primary">@ViewBag.ActiveJobs</h3>
-                        <p class="mb-0 text-muted">اسکن فعال</p>
-                        <small class="text-muted">از @ViewBag.TotalJobs کل</small>
-                    </div>
-                    <div class="text-primary">
-                        <i class="bi bi-search" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@ViewBag.ActiveJobs</div>
+                <div class="stat-label">اسکن فعال از @ViewBag.TotalJobs کل</div>
             </div>
+            <span class="stat-icon stat-icon-brand"><i class="bi bi-search"></i></span>
         </div>
     </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <h3 class="mb-0 text-warning">@ViewBag.PendingTasks</h3>
-                        <p class="mb-0 text-muted">تسک در انتظار</p>
-                        <small class="text-muted">@ViewBag.InProgressTasks در حال اجرا</small>
-                    </div>
-                    <div class="text-warning">
-                        <i class="bi bi-hourglass-split" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@ViewBag.PendingTasks</div>
+                <div class="stat-label">@ViewBag.InProgressTasks تسک در حال اجرا</div>
             </div>
+            <span class="stat-icon stat-icon-warning"><i class="bi bi-hourglass-split"></i></span>
         </div>
     </div>
-    
-    <div class="col-md-3 mb-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="d-flex align-items-center justify-content-between">
-                    <div>
-                        <h3 class="mb-0 text-info">@ViewBag.ActiveAccounts</h3>
-                        <p class="mb-0 text-muted">اکانت ایوا فعال</p>
-                        <small class="text-muted">آماده برای استفاده</small>
-                    </div>
-                    <div class="text-info">
-                        <i class="bi bi-person-badge" style="font-size: 2rem;"></i>
-                    </div>
-                </div>
+
+    <div class="col-6 col-md-3">
+        <div class="stat-card">
+            <div>
+                <div class="stat-value">@ViewBag.ActiveAccounts</div>
+                <div class="stat-label">اکانت ایوا آماده استفاده</div>
             </div>
+            <span class="stat-icon stat-icon-info"><i class="bi bi-person-badge"></i></span>
         </div>
     </div>
 </div>
