@@ -1,0 +1,9 @@
+telethon
+httpx
+cryptography
+fastapi
+uvicorn[standard]
+aiosqlite
+asyncssh
+python-dotenv
+redis

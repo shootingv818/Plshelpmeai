@@ -1,0 +1,28 @@
+{
+  "project_type": "Python async Telegram bot with distributed worker system for IVA card scanning",
+  "language": "Python 3",
+  "build_system": "None (pure Python, requirements.txt for pip dependencies)",
+  "test_framework": "No test framework (operational tool, not library). Verification is structural: imports resolve, syntax is valid.",
+  "build_command": "python -m py_compile run.py && python -c \"import ast; import pathlib; [ast.parse(f.read_text()) for f in pathlib.Path('.').rglob('*.py')]\"",
+  "test_command": "python -c \"import ast; import pathlib; [ast.parse(f.read_text()) for f in pathlib.Path('.').rglob('*.py')]\"",
+  "verification_instructions": "1. All .py files parse without SyntaxError. 2. run.py can be imported (no missing module references within the project). 3. requirements.txt lists all external deps.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "On production server: pip install -r requirements.txt && cp .env.example .env && nano .env && python run.py",
+  "environment_constraints": "INTEGRATIONS_ONLY network - cannot pip install, cannot reach PyPI or any external URL. Validation limited to AST parsing and import-chain verification within the project. No Docker daemon available.",
+  "contribution_requirements": "Complete rewrite. Delete ALL old C#/Docker files. Replace with clean Python project at repo root.",
+  "key_patterns": "Inspired by Makiioo reference: worker.py (master-side orchestration with SSH tunnels + health checks), worker_api.py (FastAPI on loopback with Bearer auth), worker_transfer.py (SSH provisioning with Docker). Telegram bot uses Telethon. Panel separators use '-------------------------------'. All bot messages in Persian. Config from .env via python-dotenv. SQLite for persistence.",
+  "relevant_files": [
+    "/projects/sandbox/Makiioo-ref/worker.py",
+    "/projects/sandbox/Makiioo-ref/worker_api.py",
+    "/projects/sandbox/Makiioo-ref/worker_transfer.py",
+    "/projects/sandbox/Makiioo-ref/config.py",
+    "/projects/sandbox/Makiioo-ref/db.py",
+    "/projects/sandbox/Makiioo-ref/crypto_util.py",
+    "/projects/sandbox/Plshelpmeai/IvaScanner.Core/IvaCrypto.cs",
+    "/projects/sandbox/Plshelpmeai/IvaScanner.Core/IvaAuthClient.cs",
+    "/projects/sandbox/Plshelpmeai/IvaScanner.Core/IvaConstants.cs",
+    "/projects/sandbox/Plshelpmeai/IvaScanner.Core/IvaScannerBot.cs",
+    "/projects/sandbox/Plshelpmeai/IvaScanner.Core/Models/IvaModels.cs"
+  ],
+  "directory_structure": "Target structure (flat in repo root): core/ (crypto, auth, scanner, constants), bot/ (app.py, panels/, utils.py), worker/ (server.py, tasks.py, deploy.py), db.py, config.py, run.py, requirements.txt, .env.example"
+}

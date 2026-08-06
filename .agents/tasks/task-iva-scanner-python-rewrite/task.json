@@ -1,0 +1,7 @@
+{
+  "task_id": "task-iva-scanner-python-rewrite",
+  "task_description": "Complete rewrite of IVA Scanner from C# to Python. Delete all old code, build a Telegram bot with smart 3-phase card scanning, distributed worker system via SSH/Docker, and advanced logging. All UI in Persian via Telegram panels.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}
