@@ -1,0 +1,438 @@
+@model IEnumerable<Worker>
+@{
+    ViewData["Title"] = "مدیریت ورکرها";
+}
+
+<div class="row mb-3">
+    <div class="col-md-8">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary" onclick="refreshWorkers()">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                به‌روزرسانی
+            </button>
+            <button type="button" class="btn btn-outline-info" onclick="showWorkerStats()">
+                <i class="bi bi-bar-chart me-1"></i>
+                آمار
+            </button>
+        </div>
+    </div>
+    <div class="col-md-4 text-end">
+        <div class="input-group">
+            <input type="text" class="form-control" id="searchWorkers" placeholder="جستجو در ورکرها...">
+            <button class="btn btn-outline-secondary" type="button">
+                <i class="bi bi-search"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Workers Stats Cards -->
+<div class="row mb-4" id="worker-stats">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <h4 class="mb-1" id="stat-online">0</h4>
+                <small>آنلاین</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <h4 class="mb-1" id="stat-working">0</h4>
+                <small>در حال کار</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center bg-secondary text-white">
+            <div class="card-body">
+                <h4 class="mb-1" id="stat-offline">0</h4>
+                <small>آفلاین</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center bg-danger text-white">
+            <div class="card-body">
+                <h4 class="mb-1" id="stat-error">0</h4>
+                <small>خطا</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Workers Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="bi bi-people me-2"></i>
+            لیست ورکرها
+        </h5>
+        <span class="badge bg-primary" id="total-workers">@Model.Count()</span>
+    </div>
+    <div class="card-body">
+        @if (Model.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="workersTable">
+                    <thead>
+                        <tr>
+                            <th>نام ورکر</th>
+                            <th>وضعیت</th>
+                            <th>اکانت ایوا</th>
+                            <th>آخرین پینگ</th>
+                            <th>تسک فعلی</th>
+                            <th>تعداد تسک‌ها</th>
+                            <th>تاخیر</th>
+                            <th>عملیات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workers-table-body">
+                        @foreach (var worker in Model)
+                        {
+                            <tr data-worker-id="@worker.Id">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-laptop me-2"></i>
+                                        <div>
+                                            <strong>@worker.Name</strong>
+                                            <br>
+                                            <small class="text-muted">@worker.Id</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @switch (worker.Status)
+                                    {
+                                        case WorkerStatus.Online:
+                                            <span class="badge bg-success">
+                                                <span class="status-indicator status-online"></span>
+                                                آنلاین
+                                            </span>
+                                            break;
+                                        case WorkerStatus.Working:
+                                            <span class="badge bg-warning">
+                                                <span class="status-indicator status-working"></span>
+                                                در حال کار
+                                            </span>
+                                            break;
+                                        case WorkerStatus.Offline:
+                                            <span class="badge bg-secondary">
+                                                <span class="status-indicator status-offline"></span>
+                                                آفلاین
+                                            </span>
+                                            break;
+                                        case WorkerStatus.Error:
+                                            <span class="badge bg-danger">
+                                                <span class="status-indicator status-error"></span>
+                                                خطا
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (worker.IvaAccount != null)
+                                    {
+                                        <span class="badge bg-info">@worker.IvaAccount.PhoneNumber</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">تخصیص نیافته</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="heartbeat-time" data-time="@worker.LastHeartbeat">
+                                        @worker.LastHeartbeat.ToString("yyyy/MM/dd HH:mm:ss")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(worker.CurrentTaskId))
+                                    {
+                                        <code>@worker.CurrentTaskId.Substring(0, 8)...</code>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">خالی</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="text-center">
+                                        <span class="text-success">@worker.TasksCompleted</span>
+                                        /
+                                        <span class="text-danger">@worker.TasksFailed</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (worker.Latency.TotalMilliseconds > 0)
+                                    {
+                                        <span class="badge @(worker.Latency.TotalMilliseconds < 1000 ? "bg-success" : worker.Latency.TotalMilliseconds < 3000 ? "bg-warning" : "bg-danger")">
+                                            @((int)worker.Latency.TotalMilliseconds)ms
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="@Url.Action("Details", new { id = worker.Id })" 
+                                           class="btn btn-outline-info" title="جزئیات">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        
+                                        @if (worker.Status == WorkerStatus.Online)
+                                        {
+                                            <button type="button" class="btn btn-outline-warning" 
+                                                    onclick="updateWorkerStatus('@worker.Id', '@WorkerStatus.Offline')" 
+                                                    title="غیرفعال کردن">
+                                                <i class="bi bi-pause"></i>
+                                            </button>
+                                        }
+                                        else if (worker.Status == WorkerStatus.Offline)
+                                        {
+                                            <button type="button" class="btn btn-outline-success" 
+                                                    onclick="updateWorkerStatus('@worker.Id', '@WorkerStatus.Online')" 
+                                                    title="فعال کردن">
+                                                <i class="bi bi-play"></i>
+                                            </button>
+                                        }
+                                        
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                onclick="deleteWorker('@worker.Id')" title="حذف">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center text-muted py-5">
+                <i class="bi bi-people mb-3" style="font-size: 3rem;"></i>
+                <h5>هیچ ورکری یافت نشد</h5>
+                <p>ورکرها به طور خودکار زمانی که آنلاین می‌شوند ثبت خواهند شد.</p>
+                <button class="btn btn-primary" onclick="refreshWorkers()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>
+                    به‌روزرسانی
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Real-time updates
+        function refreshWorkers() {
+            fetch('/Workers/GetWorkersJson')
+                .then(response => response.json())
+                .then(workers => {
+                    if (!workers.error) {
+                        updateWorkersTable(workers);
+                        updateWorkerStats();
+                    }
+                })
+                .catch(error => console.error('Error refreshing workers:', error));
+        }
+
+        function updateWorkersTable(workers) {
+            const tbody = document.getElementById('workers-table-body');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            workers.forEach(worker => {
+                const row = createWorkerRow(worker);
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('total-workers').textContent = workers.length;
+        }
+
+        function createWorkerRow(worker) {
+            // Create table row dynamically
+            const row = document.createElement('tr');
+            row.setAttribute('data-worker-id', worker.id);
+            
+            const statusBadge = getStatusBadge(worker.status);
+            const ivaAccount = worker.ivaAccount ? 
+                `<span class="badge bg-info">${worker.ivaAccount.phoneNumber}</span>` : 
+                '<span class="text-muted">تخصیص نیافته</span>';
+            
+            row.innerHTML = `
+                <td>
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-laptop me-2"></i>
+                        <div>
+                            <strong>${worker.name}</strong><br>
+                            <small class="text-muted">${worker.id}</small>
+                        </div>
+                    </div>
+                </td>
+                <td>${statusBadge}</td>
+                <td>${ivaAccount}</td>
+                <td><span class="heartbeat-time">${new Date(worker.lastHeartbeat).toLocaleString('fa-IR')}</span></td>
+                <td>${worker.currentTaskId ? `<code>${worker.currentTaskId.substring(0, 8)}...</code>` : '<span class="text-muted">خالی</span>'}</td>
+                <td>
+                    <div class="text-center">
+                        <span class="text-success">${worker.tasksCompleted}</span>
+                        /
+                        <span class="text-danger">${worker.tasksFailed}</span>
+                    </div>
+                </td>
+                <td>${getLatencyBadge(worker.latency)}</td>
+                <td>
+                    <div class="btn-group btn-group-sm">
+                        <a href="/Workers/Details/${worker.id}" class="btn btn-outline-info" title="جزئیات">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        ${getStatusButton(worker)}
+                        <button type="button" class="btn btn-outline-danger" onclick="deleteWorker('${worker.id}')" title="حذف">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            `;
+            
+            return row;
+        }
+
+        function getStatusBadge(status) {
+            const statusMap = {
+                'Online': '<span class="badge bg-success"><span class="status-indicator status-online"></span> آنلاین</span>',
+                'Working': '<span class="badge bg-warning"><span class="status-indicator status-working"></span> در حال کار</span>',
+                'Offline': '<span class="badge bg-secondary"><span class="status-indicator status-offline"></span> آفلاین</span>',
+                'Error': '<span class="badge bg-danger"><span class="status-indicator status-error"></span> خطا</span>'
+            };
+            return statusMap[status] || `<span class="badge bg-info">${status}</span>`;
+        }
+
+        function getLatencyBadge(latency) {
+            if (!latency || latency === "00:00:00") return '<span class="text-muted">-</span>';
+            
+            const parts = latency.split(':');
+            const totalMs = (parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseFloat(parts[2])) * 1000;
+            
+            let badgeClass = 'bg-success';
+            if (totalMs >= 3000) badgeClass = 'bg-danger';
+            else if (totalMs >= 1000) badgeClass = 'bg-warning';
+            
+            return `<span class="badge ${badgeClass}">${Math.round(totalMs)}ms</span>`;
+        }
+
+        function getStatusButton(worker) {
+            if (worker.status === 'Online') {
+                return `<button type="button" class="btn btn-outline-warning" onclick="updateWorkerStatus('${worker.id}', 'Offline')" title="غیرفعال کردن">
+                    <i class="bi bi-pause"></i>
+                </button>`;
+            } else if (worker.status === 'Offline') {
+                return `<button type="button" class="btn btn-outline-success" onclick="updateWorkerStatus('${worker.id}', 'Online')" title="فعال کردن">
+                    <i class="bi bi-play"></i>
+                </button>`;
+            }
+            return '';
+        }
+
+        function updateWorkerStats() {
+            fetch('/Workers/GetWorkerStats')
+                .then(response => response.json())
+                .then(stats => {
+                    if (!stats.error) {
+                        document.getElementById('stat-online').textContent = stats.online;
+                        document.getElementById('stat-working').textContent = stats.working;
+                        document.getElementById('stat-offline').textContent = stats.offline;
+                        document.getElementById('stat-error').textContent = stats.error;
+                    }
+                })
+                .catch(error => console.error('Error updating worker stats:', error));
+        }
+
+        function updateWorkerStatus(workerId, status) {
+            const formData = new FormData();
+            formData.append('workerId', workerId);
+            formData.append('status', status);
+
+            fetch('/Workers/UpdateStatus', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    refreshWorkers();
+                    showNotification('وضعیت ورکر با موفقیت تغییر یافت', 'success');
+                } else {
+                    showNotification('خطا در تغییر وضعیت ورکر', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating worker status:', error);
+                showNotification('خطا در تغییر وضعیت ورکر', 'error');
+            });
+        }
+
+        function deleteWorker(workerId) {
+            if (confirm('آیا از حذف این ورکر اطمینان دارید?')) {
+                const formData = new FormData();
+                
+                fetch(`/Workers/Delete/${workerId}`, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        refreshWorkers();
+                        showNotification('ورکر با موفقیت حذف شد', 'success');
+                    } else {
+                        showNotification('خطا در حذف ورکر', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting worker:', error);
+                    showNotification('خطا در حذف ورکر', 'error');
+                });
+            }
+        }
+
+        function showWorkerStats() {
+            updateWorkerStats();
+        }
+
+        function showNotification(message, type) {
+            const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+            const alert = document.createElement('div');
+            alert.className = `alert ${alertClass} alert-dismissible fade show`;
+            alert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.querySelector('main').insertBefore(alert, document.querySelector('main').firstChild);
+            
+            setTimeout(() => {
+                bootstrap.Alert.getOrCreateInstance(alert).close();
+            }, 3000);
+        }
+
+        // Search functionality
+        document.getElementById('searchWorkers').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#workers-table-body tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+
+        // Auto-refresh every 30 seconds
+        setInterval(refreshWorkers, 30000);
+        
+        // Initial stats load
+        updateWorkerStats();
+    </script>
+}

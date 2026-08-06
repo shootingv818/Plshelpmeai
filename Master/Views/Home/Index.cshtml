@@ -1,0 +1,339 @@
+@{
+    ViewData["Title"] = "داشبورد";
+}
+
+<!-- System Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="mb-0 text-success">@ViewBag.ActiveWorkers</h3>
+                        <p class="mb-0 text-muted">ورکر فعال</p>
+                        <small class="text-muted">از @ViewBag.TotalWorkers کل</small>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-people-fill" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="mb-0 text-primary">@ViewBag.ActiveJobs</h3>
+                        <p class="mb-0 text-muted">اسکن فعال</p>
+                        <small class="text-muted">از @ViewBag.TotalJobs کل</small>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-search" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="mb-0 text-warning">@ViewBag.PendingTasks</h3>
+                        <p class="mb-0 text-muted">تسک در انتظار</p>
+                        <small class="text-muted">@ViewBag.InProgressTasks در حال اجرا</small>
+                    </div>
+                    <div class="text-warning">
+                        <i class="bi bi-hourglass-split" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="mb-0 text-info">@ViewBag.ActiveAccounts</h3>
+                        <p class="mb-0 text-muted">اکانت ایوا فعال</p>
+                        <small class="text-muted">آماده برای استفاده</small>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-person-badge" style="font-size: 2rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Workers Status -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-people me-2"></i>
+                    وضعیت ورکرها
+                </h5>
+                <a href="@Url.Action("Index", "Workers")" class="btn btn-sm btn-outline-primary">
+                    مشاهده همه
+                </a>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.Workers != null && ((IEnumerable<Worker>)ViewBag.Workers).Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>نام ورکر</th>
+                                    <th>وضعیت</th>
+                                    <th>آخرین پینگ</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var worker in ((IEnumerable<Worker>)ViewBag.Workers).Take(5))
+                                {
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-laptop me-2"></i>
+                                            @worker.Name
+                                        </td>
+                                        <td>
+                                            @switch (worker.Status)
+                                            {
+                                                case WorkerStatus.Online:
+                                                    <span class="badge bg-success">
+                                                        <span class="status-indicator status-online"></span>
+                                                        آنلاین
+                                                    </span>
+                                                    break;
+                                                case WorkerStatus.Working:
+                                                    <span class="badge bg-warning">
+                                                        <span class="status-indicator status-working"></span>
+                                                        در حال کار
+                                                    </span>
+                                                    break;
+                                                case WorkerStatus.Offline:
+                                                    <span class="badge bg-secondary">
+                                                        <span class="status-indicator status-offline"></span>
+                                                        آفلاین
+                                                    </span>
+                                                    break;
+                                                case WorkerStatus.Error:
+                                                    <span class="badge bg-danger">
+                                                        <span class="status-indicator status-error"></span>
+                                                        خطا
+                                                    </span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                @worker.LastHeartbeat.ToString("HH:mm:ss")
+                                            </small>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-exclamation-circle mb-2" style="font-size: 2rem;"></i>
+                        <p>هیچ ورکری یافت نشد</p>
+                        <a href="@Url.Action("Index", "Workers")" class="btn btn-primary btn-sm">
+                            مدیریت ورکرها
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Jobs -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history me-2"></i>
+                    اسکن‌های اخیر
+                </h5>
+                <a href="@Url.Action("Index", "Scan")" class="btn btn-sm btn-outline-primary">
+                    مشاهده همه
+                </a>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.RecentJobs != null && ((IEnumerable<ScanJob>)ViewBag.RecentJobs).Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>شماره کارت</th>
+                                    <th>وضعیت</th>
+                                    <th>پیشرفت</th>
+                                    <th>زمان</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var job in ((IEnumerable<ScanJob>)ViewBag.RecentJobs))
+                                {
+                                    <tr>
+                                        <td>
+                                            <code>@job.CardNumber</code>
+                                        </td>
+                                        <td>
+                                            @switch (job.Status)
+                                            {
+                                                case ScanJobStatus.Running:
+                                                    <span class="badge bg-primary">در حال اجرا</span>
+                                                    break;
+                                                case ScanJobStatus.Completed:
+                                                    <span class="badge bg-success">تکمیل شده</span>
+                                                    break;
+                                                case ScanJobStatus.Failed:
+                                                    <span class="badge bg-danger">ناموفق</span>
+                                                    break;
+                                                case ScanJobStatus.Paused:
+                                                    <span class="badge bg-warning">متوقف</span>
+                                                    break;
+                                                case ScanJobStatus.Cancelled:
+                                                    <span class="badge bg-secondary">لغو شده</span>
+                                                    break;
+                                                default:
+                                                    <span class="badge bg-info">@job.Status</span>
+                                                    break;
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (job.Status == ScanJobStatus.Running)
+                                            {
+                                                <div class="progress" style="height: 15px;">
+                                                    <div class="progress-bar" role="progressbar" 
+                                                         style="width: @(job.Progress)%;" 
+                                                         aria-valuenow="@job.Progress" aria-valuemin="0" aria-valuemax="100">
+                                                        @(job.Progress)%
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">@(job.Progress)%</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                @job.CreatedAt.ToString("MM/dd HH:mm")
+                                            </small>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-search mb-2" style="font-size: 2rem;"></i>
+                        <p>هیچ اسکنی یافت نشد</p>
+                        <a href="@Url.Action("Create", "Scan")" class="btn btn-primary btn-sm">
+                            <i class="bi bi-plus me-1"></i>
+                            اسکن جدید
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- System Health Chart -->
+<div class="row">
+    <div class="col-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>
+                    نمودار عملکرد سیستم
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <h4 class="text-success mb-1" id="workers-online">@ViewBag.ActiveWorkers</h4>
+                            <small class="text-muted">ورکر آنلاین</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <h4 class="text-primary mb-1" id="jobs-running">@ViewBag.ActiveJobs</h4>
+                            <small class="text-muted">اسکن فعال</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <h4 class="text-warning mb-1" id="tasks-pending">@ViewBag.PendingTasks</h4>
+                            <small class="text-muted">تسک انتظار</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <h4 class="text-info mb-1" id="tasks-progress">@ViewBag.InProgressTasks</h4>
+                            <small class="text-muted">در حال اجرا</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <h4 class="text-success mb-1" id="accounts-active">@ViewBag.ActiveAccounts</h4>
+                            <small class="text-muted">اکانت فعال</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="mb-3">
+                            <h4 class="text-secondary mb-1" id="system-uptime">100%</h4>
+                            <small class="text-muted">آپتایم</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Real-time dashboard updates
+        function updateDashboard() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.error) {
+                        document.getElementById('workers-online').textContent = data.activeWorkers;
+                        document.getElementById('jobs-running').textContent = data.activeJobs;
+                        document.getElementById('tasks-pending').textContent = data.pendingTasks;
+                        document.getElementById('tasks-progress').textContent = data.inProgressTasks;
+                        document.getElementById('accounts-active').textContent = data.activeAccounts;
+                    }
+                })
+                .catch(error => console.error('Error updating dashboard:', error));
+        }
+
+        // Update every 30 seconds
+        setInterval(updateDashboard, 30000);
+        
+        // Update on page load
+        setTimeout(updateDashboard, 1000);
+    </script>
+}

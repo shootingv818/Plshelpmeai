@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - سامانه اسکنر ایوا</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="~/css/site.css" rel="stylesheet" />
+    <style>
+        body { font-family: 'Vazirmatn', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .sidebar { min-height: 100vh; background: #2c3e50; }
+        .sidebar .nav-link { color: #ecf0f1; padding: 0.75rem 1rem; }
+        .sidebar .nav-link:hover { background: #34495e; color: #fff; }
+        .sidebar .nav-link.active { background: #3498db; color: #fff; }
+        .main-content { background: #f8f9fa; min-height: 100vh; }
+        .card { border: none; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .badge-online { background: #27ae60; }
+        .badge-offline { background: #e74c3c; }
+        .badge-working { background: #f39c12; }
+        .progress-bar { direction: ltr; }
+        .table th { background: #f8f9fa; font-weight: 600; }
+        .btn-group-sm > .btn { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+        .navbar-brand { font-weight: bold; color: #2c3e50 !important; }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-left: 0.5rem; }
+        .status-online { background: #27ae60; }
+        .status-offline { background: #e74c3c; }
+        .status-working { background: #f39c12; }
+        .status-error { background: #e67e22; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 sidebar px-0">
+                <div class="p-3">
+                    <h5 class="text-white mb-3">
+                        <i class="bi bi-shield-check me-2"></i>
+                        سامانه اسکنر ایوا
+                    </h5>
+                </div>
+                <ul class="nav nav-pills flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")" 
+                           href="@Url.Action("Index", "Home")">
+                            <i class="bi bi-house-door me-2"></i>
+                            داشبورد
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Workers" ? "active" : "")" 
+                           href="@Url.Action("Index", "Workers")">
+                            <i class="bi bi-people me-2"></i>
+                            مدیریت ورکرها
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "RemoteServer" ? "active" : "")" 
+                           href="@Url.Action("Index", "RemoteServer")">
+                            <i class="bi bi-hdd-network me-2"></i>
+                            سرورهای Remote
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Scan" ? "active" : "")" 
+                           href="@Url.Action("Index", "Scan")">
+                            <i class="bi bi-search me-2"></i>
+                            اسکن کارت‌ها
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Accounts" ? "active" : "")" 
+                           href="@Url.Action("Index", "Accounts")">
+                            <i class="bi bi-person-badge me-2"></i>
+                            اکانت‌های ایوا
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Logs" ? "active" : "")" 
+                           href="@Url.Action("Index", "Logs")">
+                            <i class="bi bi-journal-text me-2"></i>
+                            لاگ‌های سیستم
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Settings" ? "active" : "")" 
+                           href="@Url.Action("Index", "Settings")">
+                            <i class="bi bi-gear me-2"></i>
+                            تنظیمات
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Header -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">@ViewData["Title"]</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2" id="real-time-stats">
+                            <span class="badge bg-success me-2">
+                                <i class="bi bi-check-circle me-1"></i>
+                                آنلاین
+                            </span>
+                            <span class="badge bg-info" id="current-time"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts -->
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle me-2"></i>
+                        @TempData["SuccessMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        @TempData["ErrorMessage"]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+
+                @if (ViewBag.ErrorMessage != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        @ViewBag.ErrorMessage
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                }
+
+                <!-- Content -->
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.0/signalr.min.js"></script>
+    <script src="~/js/site.js"></script>
+    <script src="~/js/signalr-dashboard.js"></script>
+    
+    <script>
+        // Update current time
+        function updateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleString('fa-IR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('current-time').textContent = timeString;
+        }
+        
+        setInterval(updateTime, 1000);
+        updateTime();
+        
+        // Auto-dismiss alerts
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                if (alert.querySelector('.btn-close')) {
+                    bootstrap.Alert.getOrCreateInstance(alert).close();
+                }
+            });
+        }, 5000);
+    </script>
+    
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

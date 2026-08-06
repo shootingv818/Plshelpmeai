@@ -1,0 +1,250 @@
+@model CreateIvaAccountRequest
+@{
+    ViewData["Title"] = "ایجاد اکانت ایوا جدید";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-plus me-2"></i>
+                    ایجاد اکانت ایوا جدید
+                </h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="PhoneNumber" class="form-label">
+                                <i class="bi bi-telephone me-1"></i>
+                                شماره تلفن
+                            </label>
+                            <input asp-for="PhoneNumber" class="form-control" placeholder="09xxxxxxxxx" 
+                                   pattern="[0-9]{11}" maxlength="11" required>
+                            <span asp-validation-for="PhoneNumber" class="text-danger"></span>
+                            <small class="form-text text-muted">شماره تلفن همراه 11 رقمی وارد کنید</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-toggle-on me-1"></i>
+                                وضعیت
+                            </label>
+                            <div class="form-check form-switch">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" id="isActiveSwitch" checked>
+                                <label class="form-check-label" for="isActiveSwitch">
+                                    فعال
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">اکانت فعال آماده استفاده توسط ورکرها است</small>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="SessionData" class="form-label">
+                            <i class="bi bi-key me-1"></i>
+                            اطلاعات Session (اختیاری)
+                        </label>
+                        <textarea asp-for="SessionData" class="form-control" rows="4" 
+                                  placeholder="اطلاعات session در صورت وجود..."></textarea>
+                        <span asp-validation-for="SessionData" class="text-danger"></span>
+                        <small class="form-text text-muted">
+                            اطلاعات session ذخیره شده از ایوا (در صورت وجود). این اطلاعات برای حفظ وضعیت لاگین استفاده می‌شود.
+                        </small>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6><i class="bi bi-info-circle me-2"></i>راهنما:</h6>
+                        <ul class="mb-0">
+                            <li>شماره تلفن باید معتبر و قابل دسترس باشد</li>
+                            <li>برای اولین بار، Session Data را خالی بگذارید</li>
+                            <li>اکانت‌های فعال توسط ورکرها قابل استفاده هستند</li>
+                            <li>هر شماره تلفن فقط یک بار قابل ثبت است</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="bi bi-arrow-right me-1"></i>
+                            بازگشت
+                        </a>
+                        
+                        <div>
+                            <button type="reset" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                پاک کردن
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check me-1"></i>
+                                ایجاد اکانت
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Add Multiple Modal -->
+<div class="modal fade" id="bulkAddModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">افزودن چندتایی اکانت</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">شماره تلفن‌ها (هر خط یک شماره):</label>
+                    <textarea id="bulkPhoneNumbers" class="form-control" rows="10" 
+                              placeholder="09123456789&#10;09987654321&#10;..."></textarea>
+                    <small class="form-text text-muted">هر شماره را در یک خط جداگانه وارد کنید</small>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="bulkIsActive" checked>
+                    <label class="form-check-label" for="bulkIsActive">
+                        همه اکانت‌ها فعال باشند
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">انصراف</button>
+                <button type="button" class="btn btn-primary" onclick="bulkCreateAccounts()">
+                    <i class="bi bi-plus me-1"></i>
+                    ایجاد همه
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Floating Action Button for Bulk Add -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+    <button class="btn btn-info rounded-circle" onclick="showBulkAddModal()" 
+            title="افزودن چندتایی" data-bs-toggle="tooltip">
+        <i class="bi bi-plus-lg"></i>
+    </button>
+</div>
+
+@section Scripts {
+    <script>
+        // Phone number validation and formatting
+        document.querySelector('input[name="PhoneNumber"]').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+            if (value.length > 11) {
+                value = value.substring(0, 11);
+            }
+            e.target.value = value;
+            
+            // Visual validation
+            const isValid = /^09[0-9]{9}$/.test(value);
+            if (value.length === 11) {
+                e.target.classList.toggle('is-valid', isValid);
+                e.target.classList.toggle('is-invalid', !isValid);
+            } else {
+                e.target.classList.remove('is-valid', 'is-invalid');
+            }
+        });
+
+        // Form validation
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const phoneInput = this.querySelector('input[name="PhoneNumber"]');
+            const phoneNumber = phoneInput.value;
+            
+            if (!/^09[0-9]{9}$/.test(phoneNumber)) {
+                e.preventDefault();
+                IvaScanner.showNotification('شماره تلفن معتبر نیست', 'error');
+                phoneInput.focus();
+                return false;
+            }
+            
+            // Add loading state to submit button
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>در حال ایجاد...';
+            submitBtn.disabled = true;
+        });
+
+        // Bulk add functionality
+        function showBulkAddModal() {
+            new bootstrap.Modal(document.getElementById('bulkAddModal')).show();
+        }
+
+        function bulkCreateAccounts() {
+            const phoneNumbers = document.getElementById('bulkPhoneNumbers').value
+                .split('\n')
+                .map(phone => phone.trim())
+                .filter(phone => phone.length > 0);
+            
+            const isActive = document.getElementById('bulkIsActive').checked;
+            
+            if (phoneNumbers.length === 0) {
+                IvaScanner.showNotification('لطفاً حداقل یک شماره تلفن وارد کنید', 'warning');
+                return;
+            }
+            
+            // Validate phone numbers
+            const invalidNumbers = phoneNumbers.filter(phone => !/^09[0-9]{9}$/.test(phone));
+            if (invalidNumbers.length > 0) {
+                IvaScanner.showNotification(`شماره‌های نامعتبر: ${invalidNumbers.join(', ')}`, 'error');
+                return;
+            }
+            
+            // Show progress
+            const modal = bootstrap.Modal.getInstance(document.getElementById('bulkAddModal'));
+            IvaScanner.showNotification('در حال ایجاد اکانت‌ها...', 'info');
+            
+            // Create accounts one by one (could be optimized with batch API)
+            let created = 0;
+            let errors = 0;
+            
+            const createNext = (index) => {
+                if (index >= phoneNumbers.length) {
+                    modal.hide();
+                    IvaScanner.showNotification(
+                        `تکمیل شد: ${created} ایجاد شد، ${errors} خطا`, 
+                        errors === 0 ? 'success' : 'warning'
+                    );
+                    
+                    // Redirect to accounts list
+                    setTimeout(() => {
+                        window.location.href = '@Url.Action("Index")';
+                    }, 2000);
+                    return;
+                }
+                
+                const formData = new FormData();
+                formData.append('PhoneNumber', phoneNumbers[index]);
+                formData.append('IsActive', isActive);
+                
+                fetch('@Url.Action("Create")', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (response.ok) {
+                        created++;
+                    } else {
+                        errors++;
+                    }
+                    createNext(index + 1);
+                })
+                .catch(error => {
+                    errors++;
+                    createNext(index + 1);
+                });
+            };
+            
+            createNext(0);
+        }
+
+        // Initialize tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+}

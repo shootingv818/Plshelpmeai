@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IVA Scanner - داشبورد اسکنر ایوا</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { 
+            font-family: 'Tahoma', 'Arial', sans-serif; 
+            background-color: #f8f9fa; 
+        }
+        .navbar-brand { 
+            font-weight: bold; 
+            color: #007bff !important; 
+        }
+        .card { 
+            border: none; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+            margin-bottom: 1rem; 
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        .status-online { background-color: #28a745; }
+        .status-working { background-color: #ffc107; }
+        .status-offline { background-color: #6c757d; }
+        .status-error { background-color: #dc3545; }
+        .progress { height: 15px; }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-shield-check me-2"></i>
+                IVA Scanner
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#dashboard">
+                            <i class="bi bi-house me-1"></i>
+                            داشبورد
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#scan">
+                            <i class="bi bi-search me-1"></i>
+                            اسکن کارت
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#workers">
+                            <i class="bi bi-people me-1"></i>
+                            ورکرها
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#accounts">
+                            <i class="bi bi-person-badge me-1"></i>
+                            اکانت‌های ایوا
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#servers">
+                            <i class="bi bi-server me-1"></i>
+                            سرورهای Remote
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4" id="dashboard">
+        <h2 class="mb-4">
+            <i class="bi bi-speedometer2 me-2"></i>
+            داشبورد اسکنر ایوا
+        </h2>
+
+        <!-- System Stats Cards -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h3 class="mb-0 text-success">3</h3>
+                                <p class="mb-0 text-muted">ورکر فعال</p>
+                                <small class="text-muted">از 5 کل</small>
+                            </div>
+                            <div class="text-success">
+                                <i class="bi bi-people-fill" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h3 class="mb-0 text-primary">7</h3>
+                                <p class="mb-0 text-muted">اسکن فعال</p>
+                                <small class="text-muted">از 15 کل</small>
+                            </div>
+                            <div class="text-primary">
+                                <i class="bi bi-search" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h3 class="mb-0 text-warning">12</h3>
+                                <p class="mb-0 text-muted">تسک در انتظار</p>
+                                <small class="text-muted">4 در حال اجرا</small>
+                            </div>
+                            <div class="text-warning">
+                                <i class="bi bi-hourglass-split" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div>
+                                <h3 class="mb-0 text-info">8</h3>
+                                <p class="mb-0 text-muted">اکانت ایوا فعال</p>
+                                <small class="text-muted">آماده برای استفاده</small>
+                            </div>
+                            <div class="text-info">
+                                <i class="bi bi-person-badge" style="font-size: 2rem;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Workers Status -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-people me-2"></i>
+                            وضعیت ورکرها
+                        </h5>
+                        <button class="btn btn-sm btn-outline-primary">مشاهده همه</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>نام ورکر</th>
+                                        <th>وضعیت</th>
+                                        <th>آخرین پینگ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-laptop me-2"></i>
+                                            Server-01
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">
+                                                <span class="status-indicator status-online"></span>
+                                                آنلاین
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">14:23:45</small>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-laptop me-2"></i>
+                                            Server-02
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning">
+                                                <span class="status-indicator status-working"></span>
+                                                در حال کار
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">14:23:42</small>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-laptop me-2"></i>
+                                            Server-03
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">
+                                                <span class="status-indicator status-online"></span>
+                                                آنلاین
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">14:23:40</small>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Jobs -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-clock-history me-2"></i>
+                            اسکن‌های اخیر
+                        </h5>
+                        <button class="btn btn-sm btn-outline-primary">مشاهده همه</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>شماره کارت</th>
+                                        <th>وضعیت</th>
+                                        <th>پیشرفت</th>
+                                        <th>زمان</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><code>6274-1234-****-5678</code></td>
+                                        <td><span class="badge bg-primary">در حال اجرا</span></td>
+                                        <td>
+                                            <div class="progress" style="height: 15px;">
+                                                <div class="progress-bar" role="progressbar" 
+                                                     style="width: 65%;" 
+                                                     aria-valuenow="65" aria-valuemin="0" aria-valuemax="100">
+                                                    65%
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td><small class="text-muted">08/06 14:20</small></td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>6274-9876-****-3210</code></td>
+                                        <td><span class="badge bg-success">تکمیل شده</span></td>
+                                        <td><span class="text-muted">100%</span></td>
+                                        <td><small class="text-muted">08/06 14:15</small></td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>6274-5555-****-1111</code></td>
+                                        <td><span class="badge bg-warning">متوقف</span></td>
+                                        <td><span class="text-muted">45%</span></td>
+                                        <td><small class="text-muted">08/06 14:10</small></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan Card Section -->
+        <div class="row" id="scan">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-search me-2"></i>
+                            اسکن کارت جدید
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">شماره کارت</label>
+                                    <input type="text" class="form-control" placeholder="6274-1234-5678-9012" 
+                                           maxlength="19" pattern="[0-9-]*">
+                                    <small class="text-muted">فرمت: XXXX-XXXX-XXXX-XXXX</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">اولویت</label>
+                                    <select class="form-select">
+                                        <option value="normal">عادی</option>
+                                        <option value="high">بالا</option>
+                                        <option value="urgent">فوری</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">تعداد ورکر</label>
+                                    <select class="form-select">
+                                        <option value="1">1 ورکر</option>
+                                        <option value="2">2 ورکر</option>
+                                        <option value="3" selected>3 ورکر</option>
+                                        <option value="auto">خودکار</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">حداکثر تلاش</label>
+                                    <input type="number" class="form-control" value="1000" min="1" max="10000">
+                                    <small class="text-muted">تعداد پین تست شده</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-center">
+                            <button class="btn btn-primary btn-lg me-2">
+                                <i class="bi bi-play-fill me-1"></i>
+                                شروع اسکن
+                            </button>
+                            <button class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-clockwise me-1"></i>
+                                ریست فرم
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Remote Servers Section -->
+        <div class="row" id="servers">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-server me-2"></i>
+                            سرورهای Remote
+                        </h5>
+                        <button class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus me-1"></i>
+                            افزودن سرور
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>نام سرور</th>
+                                        <th>آی‌پی</th>
+                                        <th>پورت</th>
+                                        <th>وضعیت</th>
+                                        <th>ورکرهای نصب شده</th>
+                                        <th>عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-server me-2"></i>
+                                            Production Server 1
+                                        </td>
+                                        <td><code>95.182.95.126</code></td>
+                                        <td><code>22</code></td>
+                                        <td>
+                                            <span class="badge bg-success">
+                                                <span class="status-indicator status-online"></span>
+                                                متصل
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">2 ورکر فعال</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-success me-1">نصب ورکر</button>
+                                            <button class="btn btn-sm btn-info me-1">مانیتور</button>
+                                            <button class="btn btn-sm btn-outline-secondary">ویرایش</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-server me-2"></i>
+                                            Backup Server
+                                        </td>
+                                        <td><code>192.168.1.100</code></td>
+                                        <td><code>22</code></td>
+                                        <td>
+                                            <span class="badge bg-warning">
+                                                <span class="status-indicator status-working"></span>
+                                                در حال تست
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">هیچ ورکری نصب نشده</span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-success me-1">نصب ورکر</button>
+                                            <button class="btn btn-sm btn-outline-secondary">ویرایش</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- IVA Accounts Section -->
+        <div class="row" id="accounts">
+            <div class="col-12 mb-4">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person-badge me-2"></i>
+                            اکانت‌های ایوا
+                        </h5>
+                        <button class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus me-1"></i>
+                            افزودن اکانت
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>نام کاربری</th>
+                                        <th>وضعیت</th>
+                                        <th>آخرین ورود</th>
+                                        <th>تعداد اسکن</th>
+                                        <th>عملیات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-person-circle me-2"></i>
+                                            account_1@eitaa.com
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-success">
+                                                <span class="status-indicator status-online"></span>
+                                                فعال
+                                            </span>
+                                        </td>
+                                        <td><small class="text-muted">08/06 13:45</small></td>
+                                        <td><span class="badge bg-info">47 اسکن</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-info me-1">تست</button>
+                                            <button class="btn btn-sm btn-outline-secondary">ویرایش</button>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <i class="bi bi-person-circle me-2"></i>
+                                            scanner_2@eitaa.com
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-warning">
+                                                <span class="status-indicator status-working"></span>
+                                                در حال کار
+                                            </span>
+                                        </td>
+                                        <td><small class="text-muted">08/06 14:00</small></td>
+                                        <td><span class="badge bg-info">23 اسکن</span></td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-info me-1">تست</button>
+                                            <button class="btn btn-sm btn-outline-secondary">ویرایش</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Simple demo interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('IVA Scanner Demo Interface Loaded');
+            
+            // Simulate real-time updates
+            setInterval(function() {
+                const onlineIndicators = document.querySelectorAll('.status-online');
+                onlineIndicators.forEach(indicator => {
+                    indicator.style.opacity = indicator.style.opacity === '0.5' ? '1' : '0.5';
+                });
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

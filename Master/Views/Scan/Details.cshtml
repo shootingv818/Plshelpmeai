@@ -1,0 +1,567 @@
+@model ScanJob
+@{
+    ViewData["Title"] = "جزئیات اسکن";
+}
+
+<div class="row">
+    <!-- Job Header -->
+    <div class="col-12">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1">
+                        <i class="bi bi-credit-card-2-front me-2"></i>
+                        اسکن شماره: #@Model.Id
+                    </h5>
+                    <small class="text-muted">
+                        ایجاد شده در @Model.CreatedAt.ToString("yyyy/MM/dd HH:mm")
+                    </small>
+                </div>
+                <div>
+                    @if (Model.Status == ScanJobStatus.Running)
+                    {
+                        <button class="btn btn-warning me-2" onclick="pauseJob(@Model.Id)">
+                            <i class="bi bi-pause me-1"></i>
+                            توقف
+                        </button>
+                    }
+                    else if (Model.Status == ScanJobStatus.Paused)
+                    {
+                        <button class="btn btn-success me-2" onclick="resumeJob(@Model.Id)">
+                            <i class="bi bi-play me-1"></i>
+                            ادامه
+                        </button>
+                    }
+                    
+                    @if (Model.Status != ScanJobStatus.Completed && Model.Status != ScanJobStatus.Cancelled)
+                    {
+                        <button class="btn btn-danger me-2" onclick="cancelJob(@Model.Id)">
+                            <i class="bi bi-x-circle me-1"></i>
+                            لغو
+                        </button>
+                    }
+                    
+                    <button class="btn btn-outline-primary" onclick="exportResults(@Model.Id)">
+                        <i class="bi bi-download me-1"></i>
+                        دانلود نتایج
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Status Overview -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>
+                    وضعیت پیشرفت
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <div class="status-indicator status-@Model.Status.ToString().ToLower() mb-2"></div>
+                            <h6 class="mb-1">@GetStatusText(Model.Status)</h6>
+                            <small class="text-muted">وضعیت</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-primary mb-1" id="completedTasks">@Model.CompletedTasks</h4>
+                            <small class="text-muted">از @Model.TotalTasks تسک</small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-success mb-1" id="successRate">@(Model.TotalTasks > 0 ? Math.Round((double)Model.CompletedTasks / Model.TotalTasks * 100, 1) : 0)%</h4>
+                            <small class="text-muted">درصد پیشرفت</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <h4 class="text-info mb-1" id="activeWorkers">0</h4>
+                            <small class="text-muted">ورکر فعال</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>پیشرفت کلی</small>
+                        <small id="progressText">@Model.CompletedTasks از @Model.TotalTasks</small>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar" id="mainProgress" 
+                             role="progressbar" 
+                             style="width: @(Model.TotalTasks > 0 ? (double)Model.CompletedTasks / Model.TotalTasks * 100 : 0)%">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Information -->
+                <div class="row">
+                    <div class="col-md-4">
+                        <small class="text-muted">شروع:</small>
+                        <div>@(Model.StartedAt?.ToString("HH:mm:ss") ?? "نامشخص")</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">زمان سپری شده:</small>
+                        <div id="elapsedTime">@GetElapsedTime(Model)</div>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">برآورد باقی‌مانده:</small>
+                        <div id="remainingTime">محاسبه...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Logs -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h6 class="mb-0">
+                    <i class="bi bi-terminal me-2"></i>
+                    لاگ زنده
+                </h6>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleAutoScroll()">
+                        <i class="bi bi-arrows-move" id="scrollIcon"></i>
+                        <span id="scrollText">اسکرول خودکار</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="clearLogs()">
+                        <i class="bi bi-trash me-1"></i>
+                        پاک کردن
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="logContainer" class="log-container" style="height: 300px; overflow-y: auto; background: #1e1e1e; color: #fff; font-family: 'Courier New', monospace; padding: 10px;">
+                    <!-- Logs will be added here via SignalR -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tasks Overview -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-list-task me-2"></i>
+                    تسک‌ها
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="task-summary">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>در انتظار</span>
+                        <span class="badge bg-secondary" id="pendingTasks">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>در حال اجرا</span>
+                        <span class="badge bg-primary" id="runningTasks">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>تکمیل شده</span>
+                        <span class="badge bg-success" id="completedTasksBadge">@Model.CompletedTasks</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>خطا</span>
+                        <span class="badge bg-danger" id="failedTasks">0</span>
+                    </div>
+                </div>
+
+                <!-- Found Cards -->
+                <div class="mt-3 pt-3 border-top">
+                    <h6 class="text-success mb-2">
+                        <i class="bi bi-check-circle me-1"></i>
+                        کارت‌های پیدا شده
+                    </h6>
+                    <div class="text-center">
+                        <h4 class="text-success mb-1" id="foundCards">0</h4>
+                        <small class="text-muted">کارت فعال</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Active Workers -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-people me-2"></i>
+                    ورکرهای فعال
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="activeWorkersList" class="worker-list">
+                    <!-- Workers will be populated via SignalR -->
+                    <div class="text-center text-muted">
+                        <i class="bi bi-hourglass-split"></i>
+                        در حال بارگذاری...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Results -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between">
+                <h6 class="mb-0">
+                    <i class="bi bi-trophy me-2"></i>
+                    آخرین نتایج
+                </h6>
+                <button class="btn btn-sm btn-outline-success" onclick="showAllResults(@Model.Id)">
+                    مشاهده همه
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="recentResults" class="results-list">
+                    <!-- Results will be populated via SignalR -->
+                    <div class="text-center text-muted">
+                        <i class="bi bi-search"></i>
+                        هنوز نتیجه‌ای پیدا نشده
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Real-time Logs -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between">
+                <h6 class="mb-0">
+                    <i class="bi bi-terminal me-2"></i>
+                    لاگ زنده
+                </h6>
+                <div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="toggleAutoScroll()">
+                        <i class="bi bi-arrows-move" id="scrollIcon"></i>
+                        <span id="scrollText">اسکرول خودکار</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline-info" onclick="clearLogs()">
+                        <i class="bi bi-trash me-1"></i>
+                        پاک کردن
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="logContainer" class="log-container" style="height: 400px; overflow-y: auto; background: #1e1e1e; color: #fff; font-family: 'Courier New', monospace; padding: 15px; font-size: 13px;">
+                    <div class="log-entry text-info">
+                        <span class="timestamp">[شروع سیستم]</span>
+                        <span class="message">اسکن شماره @Model.Id آماده اجراست...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private string GetStatusText(ScanJobStatus status)
+    {
+        return status switch
+        {
+            ScanJobStatus.Pending => "در انتظار",
+            ScanJobStatus.Running => "در حال اجرا",
+            ScanJobStatus.Paused => "متوقف شده",
+            ScanJobStatus.Completed => "تکمیل شده",
+            ScanJobStatus.Cancelled => "لغو شده",
+            ScanJobStatus.Failed => "خطا",
+            _ => "نامشخص"
+        };
+    }
+
+    private string GetElapsedTime(ScanJob job)
+    {
+        if (job.StartedAt == null) return "شروع نشده";
+        
+        var elapsed = DateTime.UtcNow - job.StartedAt.Value;
+        if (elapsed.TotalHours >= 1)
+            return $"{elapsed.Hours:00}:{elapsed.Minutes:00}:{elapsed.Seconds:00}";
+        else
+            return $"{elapsed.Minutes:00}:{elapsed.Seconds:00}";
+    }
+}
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeJobDetails(@Model.Id);
+});
+
+let autoScroll = true;
+let logContainer;
+
+function initializeJobDetails(jobId) {
+    logContainer = document.getElementById('logContainer');
+    
+    // Connect to SignalR for real-time updates
+    if (window.dashboardConnection) {
+        // Join job-specific group
+        window.dashboardConnection.invoke('JoinJobGroup', jobId.toString());
+        
+        // Listen for job updates
+        window.dashboardConnection.on('JobProgressUpdated', function(data) {
+            if (data.jobId === jobId) {
+                updateJobProgress(data);
+            }
+        });
+        
+        // Listen for task updates
+        window.dashboardConnection.on('TaskCompleted', function(data) {
+            if (data.jobId === jobId) {
+                updateTaskCounts();
+                addLogEntry('success', `تسک ${data.taskId} با موفقیت تکمیل شد`);
+            }
+        });
+        
+        // Listen for card found events
+        window.dashboardConnection.on('CardFound', function(data) {
+            if (data.jobId === jobId) {
+                updateFoundCards();
+                addLogEntry('success', `کارت جدید پیدا شد: ${data.cardNumber} (${data.accountPhone})`);
+                showNotification('کارت جدید!', `کارت ${data.cardNumber} پیدا شد`, 'success');
+            }
+        });
+        
+        // Listen for worker updates
+        window.dashboardConnection.on('WorkerStatusChanged', function(data) {
+            updateActiveWorkers();
+        });
+        
+        // Listen for system logs
+        window.dashboardConnection.on('SystemLog', function(data) {
+            if (data.context && data.context.includes(jobId.toString())) {
+                addLogEntry(data.level.toLowerCase(), data.message);
+            }
+        });
+    }
+    
+    // Load initial data
+    loadJobData(jobId);
+    loadActiveWorkers(jobId);
+    loadRecentResults(jobId);
+    
+    // Start elapsed time updater
+    startElapsedTimeUpdater();
+}
+
+function updateJobProgress(data) {
+    document.getElementById('completedTasks').textContent = data.completedTasks;
+    document.getElementById('progressText').textContent = `${data.completedTasks} از ${data.totalTasks}`;
+    
+    const percentage = data.totalTasks > 0 ? (data.completedTasks / data.totalTasks * 100) : 0;
+    document.getElementById('mainProgress').style.width = percentage + '%';
+    document.getElementById('successRate').textContent = Math.round(percentage * 10) / 10 + '%';
+    
+    // Update remaining time estimate
+    updateRemainingTime(data);
+}
+
+function updateTaskCounts() {
+    fetch(`/api/jobs/${@Model.Id}/tasks/summary`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('pendingTasks').textContent = data.pending || 0;
+            document.getElementById('runningTasks').textContent = data.running || 0;
+            document.getElementById('completedTasksBadge').textContent = data.completed || 0;
+            document.getElementById('failedTasks').textContent = data.failed || 0;
+        });
+}
+
+function updateFoundCards() {
+    fetch(`/api/jobs/${@Model.Id}/results/count`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('foundCards').textContent = data.count || 0;
+        });
+}
+
+function loadActiveWorkers(jobId) {
+    fetch(`/api/jobs/${jobId}/workers`)
+        .then(response => response.json())
+        .then(workers => {
+            const container = document.getElementById('activeWorkersList');
+            if (workers.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted"><i class="bi bi-x-circle"></i> هیچ ورکری فعال نیست</div>';
+                return;
+            }
+            
+            container.innerHTML = workers.map(worker => `
+                <div class="worker-item d-flex justify-content-between align-items-center p-2 border-bottom">
+                    <div>
+                        <strong>${worker.name}</strong>
+                        <small class="text-muted d-block">${worker.ipAddress}</small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-${worker.status === 'Online' ? 'success' : 'warning'}">${worker.status}</span>
+                        <small class="text-muted d-block">${worker.currentTask || 'بدون تسک'}</small>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('activeWorkers').textContent = workers.length;
+        });
+}
+
+function loadRecentResults(jobId) {
+    fetch(`/api/jobs/${jobId}/results/recent`)
+        .then(response => response.json())
+        .then(results => {
+            const container = document.getElementById('recentResults');
+            if (results.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted"><i class="bi bi-search"></i> هنوز نتیجه‌ای پیدا نشده</div>';
+                return;
+            }
+            
+            container.innerHTML = results.map(result => `
+                <div class="result-item p-2 border-bottom">
+                    <div class="d-flex justify-content-between">
+                        <strong class="text-success">کارت: ${result.cardNumber}</strong>
+                        <small class="text-muted">${formatDateTime(result.foundAt)}</small>
+                    </div>
+                    <div class="text-muted small">
+                        اکانت: ${result.accountPhone} | پسورد: ${result.password}
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+function addLogEntry(level, message) {
+    const timestamp = new Date().toLocaleTimeString('fa-IR');
+    const levelClass = {
+        'info': 'text-info',
+        'success': 'text-success',
+        'warning': 'text-warning',
+        'error': 'text-danger'
+    }[level] || 'text-light';
+    
+    const logEntry = document.createElement('div');
+    logEntry.className = 'log-entry';
+    logEntry.innerHTML = `
+        <span class="timestamp text-muted">[${timestamp}]</span>
+        <span class="level ${levelClass}">[${level.toUpperCase()}]</span>
+        <span class="message">${message}</span>
+    `;
+    
+    logContainer.appendChild(logEntry);
+    
+    if (autoScroll) {
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+}
+
+function toggleAutoScroll() {
+    autoScroll = !autoScroll;
+    const icon = document.getElementById('scrollIcon');
+    const text = document.getElementById('scrollText');
+    
+    if (autoScroll) {
+        icon.className = 'bi bi-arrows-move';
+        text.textContent = 'اسکرول خودکار';
+        logContainer.scrollTop = logContainer.scrollHeight;
+    } else {
+        icon.className = 'bi bi-pause';
+        text.textContent = 'اسکرول متوقف';
+    }
+}
+
+function clearLogs() {
+    logContainer.innerHTML = '<div class="log-entry text-info"><span class="timestamp">[پاک شده]</span><span class="message">لاگ پاک شد</span></div>';
+}
+
+function pauseJob(jobId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید اسکن را متوقف کنید؟')) {
+        fetch(`/api/jobs/${jobId}/pause`, { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    showNotification('توقف اسکن', 'اسکن با موفقیت متوقف شد', 'warning');
+                    setTimeout(() => location.reload(), 1000);
+                }
+            });
+    }
+}
+
+function resumeJob(jobId) {
+    fetch(`/api/jobs/${jobId}/resume`, { method: 'POST' })
+        .then(response => {
+            if (response.ok) {
+                showNotification('ادامه اسکن', 'اسکن با موفقیت ادامه یافت', 'success');
+                setTimeout(() => location.reload(), 1000);
+            }
+        });
+}
+
+function cancelJob(jobId) {
+    if (confirm('آیا مطمئن هستید که می‌خواهید اسکن را لغو کنید؟ این عمل قابل بازگشت نیست.')) {
+        fetch(`/api/jobs/${jobId}/cancel`, { method: 'POST' })
+            .then(response => {
+                if (response.ok) {
+                    showNotification('لغو اسکن', 'اسکن با موفقیت لغو شد', 'danger');
+                    setTimeout(() => location.href = '/Scan', 1500);
+                }
+            });
+    }
+}
+
+function showAllResults(jobId) {
+    window.open(`/Scan/Results/${jobId}`, '_blank');
+}
+
+function startElapsedTimeUpdater() {
+    setInterval(() => {
+        const startedAt = new Date('@Model.StartedAt?.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")' || Date.now());
+        const elapsed = new Date(Date.now() - startedAt.getTime());
+        const hours = Math.floor(elapsed.getTime() / 3600000);
+        const minutes = Math.floor((elapsed.getTime() % 3600000) / 60000);
+        const seconds = Math.floor((elapsed.getTime() % 60000) / 1000);
+        
+        document.getElementById('elapsedTime').textContent = 
+            hours > 0 ? `${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`
+                      : `${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+    }, 1000);
+}
+
+function updateRemainingTime(data) {
+    if (data.completedTasks === 0 || data.totalTasks === 0) {
+        document.getElementById('remainingTime').textContent = 'محاسبه...';
+        return;
+    }
+    
+    const completionRate = data.completedTasks / data.totalTasks;
+    const elapsedMs = Date.now() - new Date('@Model.StartedAt?.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")' || Date.now()).getTime();
+    const estimatedTotalMs = elapsedMs / completionRate;
+    const remainingMs = estimatedTotalMs - elapsedMs;
+    
+    if (remainingMs <= 0) {
+        document.getElementById('remainingTime').textContent = 'تقریباً تمام شده';
+        return;
+    }
+    
+    const remainingMinutes = Math.ceil(remainingMs / 60000);
+    if (remainingMinutes < 60) {
+        document.getElementById('remainingTime').textContent = `${remainingMinutes} دقیقه`;
+    } else {
+        const remainingHours = Math.floor(remainingMinutes / 60);
+        const remainingMins = remainingMinutes % 60;
+        document.getElementById('remainingTime').textContent = `${remainingHours} ساعت و ${remainingMins} دقیقه`;
+    }
+}
+</script>

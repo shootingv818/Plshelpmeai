@@ -1,0 +1,354 @@
+@model IvaScanner.Core.Models.CreateRemoteServerRequest
+@{
+    ViewData["Title"] = "افزودن سرور جدید";
+    Layout = "_Layout";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-server"></i>
+                        افزودن سرور Remote جدید
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Create" method="post" id="createServerForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="Name" class="form-label">نام سرور <span class="text-danger">*</span></label>
+                                    <input asp-for="Name" class="form-control" placeholder="مثل: Production-Server-01" required>
+                                    <span asp-validation-for="Name" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="IpAddress" class="form-label">آدرس IP <span class="text-danger">*</span></label>
+                                    <input asp-for="IpAddress" class="form-control" placeholder="192.168.1.100" required>
+                                    <span asp-validation-for="IpAddress" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="SshPort" class="form-label">پورت SSH</label>
+                                    <input asp-for="SshPort" type="number" class="form-control" value="22" min="1" max="65535">
+                                    <span asp-validation-for="SshPort" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="OperatingSystem" class="form-label">سیستم‌عامل</label>
+                                    <select asp-for="OperatingSystem" class="form-control">
+                                        <option value="Linux">Linux</option>
+                                        <option value="Windows">Windows</option>
+                                        <option value="MacOS">macOS</option>
+                                    </select>
+                                    <span asp-validation-for="OperatingSystem" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="Username" class="form-label">نام کاربری <span class="text-danger">*</span></label>
+                                    <input asp-for="Username" class="form-control" placeholder="root یا administrator" required>
+                                    <span asp-validation-for="Username" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">روش احراز هویت</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="authMethod" id="authPassword" value="password" checked>
+                                        <label class="form-check-label" for="authPassword">
+                                            رمز عبور
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="authMethod" id="authKey" value="key">
+                                        <label class="form-check-label" for="authKey">
+                                            کلید خصوصی (Private Key)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" id="passwordSection">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="Password" class="form-label">رمز عبور</label>
+                                    <input asp-for="Password" type="password" class="form-control" placeholder="رمز عبور SSH">
+                                    <span asp-validation-for="Password" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row" id="keySection" style="display: none;">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="PrivateKeyPath" class="form-label">مسیر کلید خصوصی</label>
+                                    <input asp-for="PrivateKeyPath" class="form-control" placeholder="/path/to/private/key">
+                                    <span asp-validation-for="PrivateKeyPath" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="WorkerPath" class="form-label">مسیر نصب Worker</label>
+                                    <input asp-for="WorkerPath" class="form-control" placeholder="/opt/iva-worker">
+                                    <small class="form-text text-muted">خالی بگذارید برای استفاده از مسیر پیش‌فرض</small>
+                                    <span asp-validation-for="WorkerPath" class="text-danger"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label asp-for="MaxWorkers" class="form-label">حداکثر تعداد Worker</label>
+                                    <input asp-for="MaxWorkers" type="number" class="form-control" value="2" min="1" max="20">
+                                    <span asp-validation-for="MaxWorkers" class="text-danger"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input asp-for="AutoDeploy" class="form-check-input" type="checkbox">
+                                <label asp-for="AutoDeploy" class="form-check-label">
+                                    Deploy خودکار Workerها پس از افزودن سرور
+                                </label>
+                                <small class="form-text text-muted">
+                                    در صورت فعال‌سازی، بلافاصله پس از تست موفق اتصال، Workerها نصب خواهند شد
+                                </small>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="form-group">
+                            <button type="button" class="btn btn-info" id="testConnection">
+                                <i class="fas fa-plug"></i>
+                                تست اتصال
+                            </button>
+                            <small class="form-text text-muted">
+                                پیش از ذخیره، اتصال به سرور را تست کنید
+                            </small>
+                        </div>
+
+                        <div id="connectionResult" class="alert" style="display: none;"></div>
+
+                        <div class="form-group text-center">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i>
+                                ذخیره سرور
+                            </button>
+                            <a href="@Url.Action("Index")" class="btn btn-secondary btn-lg mr-3">
+                                <i class="fas fa-times"></i>
+                                انصراف
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Server Requirements Card -->
+            <div class="card shadow mt-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-info">
+                        <i class="fas fa-info-circle"></i>
+                        پیش‌نیازهای سرور
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Linux Servers:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Ubuntu 20.04+ / CentOS 8+ / Debian 11+</li>
+                                <li><i class="fas fa-check text-success"></i> SSH Server فعال</li>
+                                <li><i class="fas fa-check text-success"></i> دسترسی sudo</li>
+                                <li><i class="fas fa-check text-success"></i> حداقل 2GB RAM</li>
+                                <li><i class="fas fa-check text-success"></i> .NET 8.0 Runtime (نصب خودکار)</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Windows Servers:</h6>
+                            <ul class="list-unstyled">
+                                <li><i class="fas fa-check text-success"></i> Windows Server 2019+</li>
+                                <li><i class="fas fa-check text-success"></i> OpenSSH Server یا PowerShell Remoting</li>
+                                <li><i class="fas fa-check text-success"></i> دسترسی Administrator</li>
+                                <li><i class="fas fa-check text-success"></i> حداقل 2GB RAM</li>
+                                <li><i class="fas fa-check text-success"></i> .NET 8.0 Runtime (نصب خودکار)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>نکات مهم:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>اطمینان حاصل کنید که سرور به اینترنت دسترسی دارد</li>
+                            <li>فایروال سرور باید اتصال SSH/RDP را مجاز کند</li>
+                            <li>برای امنیت بیشتر، استفاده از کلید خصوصی توصیه می‌شود</li>
+                            <li>کاربر SSH باید دسترسی نصب نرم‌افزار داشته باشد</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Auth method toggle
+            $('input[name="authMethod"]').change(function() {
+                if ($(this).val() === 'password') {
+                    $('#passwordSection').show();
+                    $('#keySection').hide();
+                    $('#Password').prop('required', true);
+                    $('#PrivateKeyPath').prop('required', false);
+                } else {
+                    $('#passwordSection').hide();
+                    $('#keySection').show();
+                    $('#Password').prop('required', false);
+                    $('#PrivateKeyPath').prop('required', true);
+                }
+            });
+
+            // Test connection
+            $('#testConnection').click(function() {
+                var button = $(this);
+                var originalText = button.html();
+                
+                button.html('<i class="fas fa-spinner fa-spin"></i> در حال تست...').prop('disabled', true);
+                $('#connectionResult').hide();
+
+                var formData = {
+                    name: $('#Name').val(),
+                    ipAddress: $('#IpAddress').val(),
+                    sshPort: $('#SshPort').val(),
+                    username: $('#Username').val(),
+                    password: $('#Password').val(),
+                    privateKeyPath: $('#PrivateKeyPath').val(),
+                    operatingSystem: $('#OperatingSystem').val()
+                };
+
+                $.ajax({
+                    url: '@Url.Action("TestConnection", "RemoteServer")',
+                    type: 'POST',
+                    data: formData,
+                    success: function(result) {
+                        var alertClass = result.success ? 'alert-success' : 'alert-danger';
+                        var icon = result.success ? 'fas fa-check' : 'fas fa-times';
+                        
+                        var html = `
+                            <i class="${icon}"></i>
+                            <strong>${result.success ? 'اتصال موفق!' : 'اتصال ناموفق!'}</strong><br>
+                        `;
+
+                        if (result.success) {
+                            html += `
+                                <ul class="mb-0 mt-2">
+                                    <li>.NET نصب شده: ${result.hasDotNet ? 'بله' : 'خیر'} ${result.dotNetVersion ? '(' + result.dotNetVersion + ')' : ''}</li>
+                                    <li>Systemd دردسترس: ${result.hasSystemd ? 'بله' : 'خیر'}</li>
+                                    <li>دسترسی Sudo: ${result.hasSudo ? 'بله' : 'خیر'}</li>
+                                </ul>
+                            `;
+                        } else {
+                            html += `<p class="mb-0">${result.errorMessage}</p>`;
+                        }
+
+                        $('#connectionResult').removeClass().addClass('alert ' + alertClass).html(html).show();
+                    },
+                    error: function() {
+                        $('#connectionResult')
+                            .removeClass()
+                            .addClass('alert alert-danger')
+                            .html('<i class="fas fa-times"></i> <strong>خطا در تست اتصال</strong>')
+                            .show();
+                    },
+                    complete: function() {
+                        button.html(originalText).prop('disabled', false);
+                    }
+                });
+            });
+
+            // Form validation
+            $('#createServerForm').submit(function(e) {
+                var authMethod = $('input[name="authMethod"]:checked').val();
+                
+                if (authMethod === 'password' && !$('#Password').val()) {
+                    e.preventDefault();
+                    alert('لطفاً رمز عبور را وارد کنید');
+                    return false;
+                }
+                
+                if (authMethod === 'key' && !$('#PrivateKeyPath').val()) {
+                    e.preventDefault();
+                    alert('لطفاً مسیر کلید خصوصی را وارد کنید');
+                    return false;
+                }
+
+                return true;
+            });
+
+            // Auto-fill worker path based on OS
+            $('#OperatingSystem').change(function() {
+                var os = $(this).val();
+                var workerPath = $('#WorkerPath');
+                
+                if (!workerPath.val()) {
+                    switch(os) {
+                        case 'Linux':
+                            workerPath.val('/opt/iva-worker');
+                            break;
+                        case 'Windows':
+                            workerPath.val('C:\\IvaWorker');
+                            break;
+                        case 'MacOS':
+                            workerPath.val('/usr/local/iva-worker');
+                            break;
+                    }
+                }
+            });
+        });
+    </script>
+}
+
+@section Styles {
+    <style>
+        .form-group label.form-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .card {
+            border: none;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        
+        .alert {
+            border-radius: 0.35rem;
+        }
+        
+        .list-unstyled li {
+            padding: 0.25rem 0;
+        }
+        
+        .text-danger {
+            font-size: 0.875rem;
+        }
+    </style>
+}
