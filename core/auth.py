@@ -93,12 +93,16 @@ class IvaAuthClient:
         tid = transaction_id or self.transaction_id
         self.transaction_id = tid
 
-        body = {"keyId": key_id, "transactionId": tid}
+        body = {"keyId": int(key_id), "transactionId": tid}
         client = await self._get_client()
         resp = await client.post(
             PUBLIC_KEY_URL,
             json=body,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "okhttp/4.12.0",
+            },
         )
 
         if resp.status_code != 200:
