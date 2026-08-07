@@ -11,6 +11,12 @@ import socks
 import config
 import db
 from bot.panels import main_menu, accounts, scan, workers, logs
+from error_logger import (
+    init_logger,
+    install_global_handlers,
+    install_async_handler,
+    catch_errors,
+)
 
 
 def _parse_proxy(proxy_url: str):
@@ -106,6 +112,13 @@ async def start_bot():
 
     await bot.start(bot_token=config.BOT_TOKEN)
 
+    # ── راه‌اندازی error_logger ──────────────────────────────────────
+    # ۱. نصب هندلر asyncio روی loop جاری
+    install_async_handler()
+    # ۲. مقداردهی با bot و LOG_CHAT_ID
+    init_logger(bot, config.LOG_CHAT_ID)
+    # ─────────────────────────────────────────────────────────────────
+
     # ثبت هندلرهای پنل‌ها
     main_menu.register(bot)
     accounts.register(bot)
@@ -115,6 +128,7 @@ async def start_bot():
 
     # هندلر پیام عمومی (مکالمه‌ها)
     @bot.on(events.NewMessage(func=lambda e: e.sender_id == config.OWNER_ID and e.is_private))
+    @catch_errors(handler_name="message_dispatcher")
     async def message_dispatcher(event):
         """توزیع پیام‌های متنی به پنل‌های مربوطه"""
         # بررسی اسکن
@@ -142,6 +156,7 @@ async def start_bot():
             [
                 f"⏰ زمان: {config.now_str()}",
                 f"حالت: {config.MODE}",
+                f"📋 گزارش خطاها → chat_id: {config.LOG_CHAT_ID}",
             ]
         )
         await bot.send_message(config.OWNER_ID, start_msg)

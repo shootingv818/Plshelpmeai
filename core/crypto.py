@@ -133,16 +133,54 @@ def hex_to_base64(hex_str: str) -> str:
 
 
 def base64_modulus_to_pem(base64_modulus: str) -> str:
-    """ساخت PEM از مدولوس Base64 (مانند C# code)"""
-    # SPKI prefix for RSA 2048 with exponent 65537
-    spki_prefix = "30820122300D06092A864886F70D01010105000382010F003082010A0282010100"
-    spki_suffix = "0203010001"
+    """
+    ساخت SubjectPublicKeyInfo PEM از مدولوس Base64 خام.
 
-    modulus_hex = base64_to_hex(base64_modulus)
-    der_hex = spki_prefix + modulus_hex + spki_suffix
-    b64 = hex_to_base64(der_hex)
+    مشکل نسخه قبلی: طول‌های DER کاملاً hardcode بودند (فقط RSA-2048).
+    اگر سرور مدولوسی با طول متفاوت برمی‌گرداند، DER ساخته‌شده اشتباه بود
+    و cryptography library خطای DataFormatMismatch می‌داد.
 
-    # شکستن به خطوط 64 کاراکتری
-    lines = [b64[i:i+64] for i in range(0, len(b64), 64)]
+    این نسخه برای هر اندازه مدولوسی (1024، 2048، 4096 بیت و ...) کار می‌کند.
+    """
+    # --- رمزگشایی مدولوس ---
+    raw = base64.b64decode(base64_modulus)
+
+    # DER INTEGER باید unsigned باشد؛ اگر بیت MSB یک باشد leading 0x00 اضافه می‌شود
+    if raw[0] >= 0x80:
+        raw = b"\x00" + raw
+
+    def _encode_len(n: int) -> bytes:
+        """کدگذاری طول DER (کوتاه یا بلند)"""
+        if n < 0x80:
+            return bytes([n])
+        elif n < 0x100:
+            return bytes([0x81, n])
+        else:
+            return bytes([0x82, (n >> 8) & 0xFF, n & 0xFF])
+
+    # --- INTEGER: مدولوس ---
+    mod_der = b"\x02" + _encode_len(len(raw)) + raw
+
+    # --- INTEGER: اکسپوننت ثابت 65537 = 0x010001 ---
+    exp_der = b"\x02\x03\x01\x00\x01"
+
+    # --- SEQUENCE: RSAPublicKey ---
+    rsa_inner = mod_der + exp_der
+    rsa_seq = b"\x30" + _encode_len(len(rsa_inner)) + rsa_inner
+
+    # --- BIT STRING: padding=0x00 + RSAPublicKey ---
+    bit_str_body = b"\x00" + rsa_seq
+    bit_str = b"\x03" + _encode_len(len(bit_str_body)) + bit_str_body
+
+    # --- SEQUENCE: AlgorithmIdentifier (rsaEncryption OID + NULL) ---
+    alg_id = bytes.fromhex("300D06092A864886F70D0101010500")
+
+    # --- SEQUENCE: SubjectPublicKeyInfo ---
+    spki_body = alg_id + bit_str
+    spki = b"\x30" + _encode_len(len(spki_body)) + spki_body
+
+    # --- تبدیل به PEM ---
+    b64 = base64.b64encode(spki).decode("ascii")
+    lines = [b64[i:i + 64] for i in range(0, len(b64), 64)]
     pem_body = "\n".join(lines)
     return f"-----BEGIN PUBLIC KEY-----\n{pem_body}\n-----END PUBLIC KEY-----"

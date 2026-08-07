@@ -7,10 +7,15 @@ import asyncio
 import sys
 
 import config
+from error_logger import install_global_handlers
 
 
 def main():
     """اجرای برنامه بر اساس حالت تنظیم‌شده"""
+
+    # نصب هندلر سراسری sys.excepthook — قبل از هر چیز
+    install_global_handlers()
+
     mode = config.MODE
 
     if mode == "master":

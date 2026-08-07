@@ -126,7 +126,16 @@ class IvaAuthClient:
         if not key_data:
             raise Exception(f"keyData در پاسخ یافت نشد: {resp.text[:200]}")
 
-        self.key_store[StorageKeys.RSA_PUBLIC] = key_data
+        # مشکل قبلی: key_data خام (base64 مدولوس) مستقیم ذخیره می‌شد.
+        # بعداً rsa_encrypt -> import_public_key سعی می‌کرد load_der_public_key کند که fail می‌شد.
+        # راه‌حل: همین‌جا به PEM تبدیل کن و PEM را ذخیره کن.
+        try:
+            pem = base64_modulus_to_pem(key_data)
+            self.key_store[StorageKeys.RSA_PUBLIC] = pem
+        except Exception:
+            # اگر key_data از قبل DER/PEM باشد، خام ذخیره می‌شود
+            self.key_store[StorageKeys.RSA_PUBLIC] = key_data
+
         return key_data
 
     async def key_exchange(self):

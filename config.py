@@ -31,6 +31,10 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID = _int("OWNER_ID")
 LOG_GROUP_ID = _int("LOG_GROUP_ID")
 
+# آیدی چت ادمین برای دریافت گزارش خطا (error_logger)
+# اگر تنظیم نشده، به‌جای آن از OWNER_ID استفاده می‌شود
+LOG_CHAT_ID = _int("LOG_CHAT_ID") or _int("OWNER_ID")
+
 # ---- حالت اجرا ----
 # master = ربات تلگرام (هماهنگ‌کننده)
 # worker = سرور API بدون پنل (فقط اجرای دستورات مستر)
