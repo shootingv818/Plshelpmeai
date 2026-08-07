@@ -3,6 +3,7 @@
 ارتباط async با API آیوا
 """
 import json
+import random
 import time
 import uuid
 from typing import Any, Callable, Optional
@@ -24,9 +25,24 @@ class IvaAuthClient:
         self.key_store: dict = key_store if key_store is not None else {}
         self.crypto = IvaCrypto(self.key_store)
         self.timeout = timeout
-        self.transaction_id = str(uuid.uuid4())
         self.current_phone: Optional[str] = None
         self._client: Optional[httpx.AsyncClient] = None
+
+    @staticmethod
+    def _generate_transaction_id() -> str:
+        """
+        تولید transactionId معتبر برای شاپرک
+        فرمت: رشته عددی دقیقاً ۲۰ رقمی
+        ساختار: timestamp میلی‌ثانیه‌ای (۱۳ رقم) + ارقام تصادفی (۷ رقم)
+        """
+        # timestamp میلی‌ثانیه‌ای (۱۳ رقم)
+        timestamp_ms = str(int(time.time() * 1000))
+        
+        # ارقام تصادفی برای تکمیل تا ۲۰ رقم
+        remaining_digits = 20 - len(timestamp_ms)
+        random_part = "".join(str(random.randint(0, 9)) for _ in range(remaining_digits))
+        
+        return timestamp_ms + random_part
 
     @property
     def base_address(self) -> str:
@@ -90,8 +106,8 @@ class IvaAuthClient:
 
     async def fetch_public_key(self, key_id: str = "1", transaction_id: str = None) -> str:
         """دریافت کلید عمومی از سرور شاپرک"""
-        tid = transaction_id or self.transaction_id
-        self.transaction_id = tid
+        # هر بار یک transactionId تازه تولید می‌شود
+        tid = transaction_id or self._generate_transaction_id()
 
         body = {"keyId": int(key_id), "transactionId": tid}
         client = await self._get_client()
